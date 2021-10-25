@@ -18,7 +18,7 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
     if GBT_band=="S":
         min_freq = 1800
         max_freq = 2800
-    if GBT_band=="C":
+    if GBT_band=="C":  
         min_freq = 4000
         max_freq = 7800
     if GBT_band=="X":

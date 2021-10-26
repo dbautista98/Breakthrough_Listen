@@ -155,5 +155,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy with threshold of %s: n=%s"%(args.threshold, len(files)))
-    plt.savefig("spectral_occupancy_thresh_%s.pdf"%int(args.threshold))
+    plt.savefig("%s_band_spectral_occupancy_thresh_%s.pdf"%(args.band, int(args.threshold)))
     print("Done")

@@ -16,3 +16,8 @@ This semester I started with writing a program to help visualize what turboSETI 
 In the latter part of the semester, I resumed working on long-term GBT statistics, with the goal to come up with a method to quantify “good” and “bad” GBT data. This involves gathering a large number of .dat files that can be used to get a long term average that individual .dat files can be compared to. Comparing the file to the long-term data allows us to determine if there are parts of the spectrum that have an unusually high or low number of hits detected, which could be indicative of a high amount of RFI, or a problem with the collecting/storing of the data. My current progress on the long-term GBT statistics can be found here: https://github.com/dbautista98/Breakthrough_Listen/blob/main/long_term_statistics.ipynb
 
 PS: if you have some .dat files that you are willing to share, feel free to reach out to me on Slack or at my email above :)
+
+
+## Fall 2021
+
+This semester I am working on estimating the likelihood that a signal flagged as interesting by turboSETI is a false positive and is instead due to a satellite passing over the telescope. The data I am using for this analysis was collected at Green Bank Telescope and initially used by Raffy Traas. To do this comparison, I will start by comparing the results of turboSETI to the results of Yuhong's [energy detection](https://github.com/FX196/SETI-Energy-Detection) algorithm. To do this, I am generating spectral occupancy plots using data from turboSETI's dat file outputs and Energy Detection's csv outputs. 

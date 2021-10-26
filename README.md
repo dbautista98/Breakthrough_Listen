@@ -1,5 +1,7 @@
 # Breakthrough_Listen
 
+email: dbautista98@berkeley.edu
+
 Created this github repository to save and keep track of my work with Breakthrough Listen
 
 ## Fall 2020

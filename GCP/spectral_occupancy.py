@@ -136,6 +136,7 @@ if __name__ == "__main__":
     parser.add_argument("-folder", "-f", help="directory .dat files are held in")
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
+    parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 2048", default=2048)
     args = parser.parse_args()
 
     print("Gathering files...", end="")
@@ -146,13 +147,13 @@ if __name__ == "__main__":
 
     # Remove DC spikes?
 
-    bin_edges, prob_hist = calculate_proportion(files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)
+    bin_edges, prob_hist = calculate_proportion(files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, threshold=args.threshold)
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))
     plt.bar(bin_edges[:-1], prob_hist, width = .99) 
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
-    plt.title("Spectral Occupancy: n=%s"%len(files))
-    plt.savefig("spectral_occupancy.pdf")
+    plt.title("Spectral Occupancy with threshold of %s: n=%s"%(args.threshold, len(files)))
+    plt.savefig("spectral_occupancy_thres_%s.pdf"%args.threshold)
     print("Done")

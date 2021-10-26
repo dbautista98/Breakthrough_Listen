@@ -110,7 +110,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, t
             print("Excluding hits in the range 1200-1341 MHz")
             df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
             first_edge = np.arange(min_freq, 1200, bin_width)
-            second_edge= np.arange(1341, max_freq, bin_width) #may or may not need max_freq+1
+            second_edge= np.arange(1341, max_freq, bin_width) 
             bin_edges = np.append(first_edge, second_edge)
     
     if GBT_band=="S":
@@ -155,5 +155,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy with threshold of %s: n=%s"%(args.threshold, len(files)))
-    plt.savefig("spectral_occupancy_thres_%s.pdf"%args.threshold)
+    plt.savefig("spectral_occupancy_thresh_%s.pdf"%args.threshold)
     print("Done")

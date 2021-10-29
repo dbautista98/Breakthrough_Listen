@@ -65,6 +65,6 @@ if __name__ == "__main__":
         plt.xlabel("turboSETI bin height")
         plt.ylabel("energy detection bin height")
         plt.legend()
-        plt.title("%s band comparison of %s energy detection files at a threshold of %s\nand %s turboSETI files, with a bin width of %s"%(energy["band"], energy["n files"], energy["threshold"], turboSETI["n files"], turboSETI["bin width"]))
+        plt.title("%s band comparison of %s energy detection files at a threshold of %s\nand %s turboSETI files, with a bin width of %s MHz"%(energy["band"], energy["n files"], energy["threshold"], turboSETI["n files"], turboSETI["bin width"]))
         plt.savefig("%s_band_%s_MHz_bins_%s_threshold.pdf"%(energy["band"], energy["bin width"], energy["threshold"]))
     

@@ -228,5 +228,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy: n=%s"%len(dat_files))
-    plt.savefig("spectral_occupancy.pdf")
+    plt.savefig("%s_band_spectral_occupancy.pdf"%args.band)
     print("Done")

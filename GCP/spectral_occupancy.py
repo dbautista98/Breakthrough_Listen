@@ -219,8 +219,8 @@ if __name__ == "__main__":
 
     if args.save:
         print("Saving histogram data")
-        to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist}
-        filename = "%s_band_spectral_occupancy_%s_MHz_bins_%s_threshold.pkl"%(args.band, args.width, args.threshold)
+        to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "threshold":args.threshold, "bin width":args.width, "algorithm":"energy detection", "n files":len(files)}
+        filename = "energy_detection_%s_band_spectral_occupancy_%s_MHz_bins_%s_threshold.pkl"%(args.band, args.width, args.threshold)
         with open(filename, "wb") as f:
             pickle.dump(to_save, f)
 

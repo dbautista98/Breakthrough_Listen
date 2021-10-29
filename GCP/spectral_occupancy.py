@@ -198,7 +198,7 @@ def remove_DC_spikes(df, header_path):#freqs_fine_channels_list, foff):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given the output of the energy detection algorithm")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
-    parser.add_argument("-folder", "-f", help="directory containing the folders which store the energy detection output")
+    parser.add_argument("folder", help="directory containing the folders which store the energy detection output")
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 2048", type=float, default=2048)

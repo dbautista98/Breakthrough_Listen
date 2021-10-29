@@ -220,7 +220,7 @@ if __name__ == "__main__":
     if args.save:
         print("Saving histogram data")
         to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist}
-        filename = "%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+        filename = "%s_band_spectral_occupancy_%s_MHz_bins_%s_threshold.pkl"%(args.band, args.width, args.threshold)
         with open(filename, "wb") as f:
             pickle.dump(to_save, f)
 

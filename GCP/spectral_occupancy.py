@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import pandas
+# import pandas
 import turbo_seti.find_event as find
 import glob
 import argparse
 import os
 from tqdm import trange
 
-def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
+def calculate_hist(csv_file, header_file, GBT_band, bin_width=1, threshold=2048):
     """
     calculates a histogram of the number of hits for a single .dat file
     
@@ -16,6 +16,8 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
     ----------
     csv_file : str
         filepath to the .csv file
+    header_file : str
+        filepath to the .pkl file containing the header
     GBT_band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
@@ -35,6 +37,11 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
     """
     # read in the data
     tbl = pd.read_csv(csv_file)
+
+    # remove DC spikes
+    tbl = remove_DC_spikes(tbl, header_file)
+
+    # filter above threshold
     tbl = tbl.iloc[np.where(tbl["statistic"] > threshold)]
 
     # make the bins of the histogram
@@ -56,7 +63,7 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
     del tbl
     return hist, bin_edges
 
-def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, threshold=2048):
+def calculate_proportion(file_list, header_list, GBT_band, notch_filter=False, bin_width=1, threshold=2048):
     """
     Takes in a list of .dat files and makes a true/false table of hits in a frequency bin
     
@@ -66,6 +73,10 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, t
         A python list containing the filepaths to .csv 
         files that will be used to calculate the 
         spcetral occupancy
+    header_list : list
+        A python list containing the filepaths to .pkl
+        files that will be used to locate DC spike channels
+        to remove from data
     GBT_band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
@@ -84,7 +95,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, t
     print("Calculating histograms...",end="")
     #calculate histogram for the .dat file and check the boundaries on the data
     for i in trange(len(file_list)):
-        hist, bin_edges = calculate_hist(file_list[i], GBT_band, bin_width, threshold)
+        hist, bin_edges = calculate_hist(file_list[i], header_list[i], GBT_band, bin_width, threshold)
         if min(bin_edges) > min_freq:
             min_freq = min(bin_edges)
         if max(bin_edges) < max_freq:
@@ -130,10 +141,64 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, t
     
     return bin_edges, total/len(file_list) 
 
+def read_header(header_path):
+    """
+    Takes in a path to pickled header and returns a dictionary 
+    containing the header info
+
+    Arguments:
+    -----------
+    header_path : str
+        file path to the location of the .pkl file
+    
+    Returns:
+    --------
+    header : dict
+        the header info from the corresponding 
+        .h5 or fil file
+    """
+    return pd.read_pickle(header_path)
+
+def spike_channels(num_course_channels, nfpc):
+    """makes a spike channels list given a list of channels"""
+    spike_channels_list=[]
+    for i in np.arange(num_course_channels): 
+        spike_channel=(nfpc/2.0)+(nfpc*i)
+        spike_channels_list.append(spike_channel)
+    return np.asarray(spike_channels_list)
+
+def freqs_fine_channels(spike_channels_list, fch1, foff):
+    freqs_fine_channels_list=[]
+    for index, value in enumerate(spike_channels_list):
+        freq_fine_channel=fch1+foff*value
+        if freq_fine_channel>0:
+            freq_fine_channel=round(freq_fine_channel, 6)
+            freqs_fine_channels_list.append(freq_fine_channel)
+        else:
+            break
+    return np.asarray(freqs_fine_channels_list)
+
+def grab_parameters(header):
+    fch1 = header["fch1"]
+    foff = header["foff"]
+    nfpc=(1500.0/512.0)/abs(foff)
+    num_course_channels = header["nchans"]/nfpc
+    return fch1, foff, nfpc, num_course_channels
+
+def remove_DC_spikes(df, header_path):#freqs_fine_channels_list, foff):
+    header = read_header(header_path)
+    fch1, foff, nfpc, num_course_channels = grab_parameters(header)
+    spike_channels_list = spike_channels(num_course_channels, nfpc)
+    freqs_fine_channels_list = freqs_fine_channels(spike_channels_list, fch1, foff)
+
+    freqs = df["freqs"]
+    keep_mask = np.in1d(freqs, freqs_fine_channels_list, invert=True)
+    return df[keep_mask]
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
+    parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given the output of the energy detection algorithm")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
-    parser.add_argument("-folder", "-f", help="directory .dat files are held in")
+    parser.add_argument("-folder", "-f", help="directory containing the folders which store the energy detection output")
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 2048", type=float, default=2048)
@@ -141,13 +206,14 @@ if __name__ == "__main__":
 
     print("Gathering files...", end="")
     files = glob.glob(args.folder+"/*")
+    headers = []
     for i in range(len(files)):
+        headers.append(files[i] + "/header.pkl")
         files[i] = files[i] + "/all_info_df.csv"
     print("Done.")
 
-    # Remove DC spikes?
 
-    bin_edges, prob_hist = calculate_proportion(files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, threshold=args.threshold)
+    bin_edges, prob_hist = calculate_proportion(files, headers, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, threshold=args.threshold)
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))

@@ -7,6 +7,7 @@ import glob
 import argparse
 import os
 from tqdm import trange
+import pickle
 
 def calculate_hist(csv_file, header_file, GBT_band, bin_width=1, threshold=2048):
     """
@@ -202,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 2048", type=float, default=2048)
+    parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
     args = parser.parse_args()
 
     print("Gathering files...", end="")
@@ -214,6 +216,13 @@ if __name__ == "__main__":
 
 
     bin_edges, prob_hist = calculate_proportion(files, headers, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, threshold=args.threshold)
+
+    if args.save:
+        print("Saving histogram data")
+        to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist}
+        filename = "%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+        with open(filename, "wb") as f:
+            pickle.dump(to_save, f)
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))

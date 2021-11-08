@@ -144,7 +144,7 @@ if __name__ == "__main__":
     print("Done.")
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
-        hist, edges = calculate_hist(folder_paths[i+1]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold))
+        hist, edges = calculate_hist(folder_paths[i+1]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold), notch_filter=args.notch_filter)
         total_hist += hist
     print("Done.")
 

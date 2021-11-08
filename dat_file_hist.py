@@ -17,7 +17,9 @@ if __name__ == "__main__":
     dat_files = glob.glob(args.folder+"/*.dat")
     print("Done.")
 
+    print("removing DC spikes...", end="")
     dat_files = so.remove_spikes(dat_files, args.band)
+    print("Done.")
 
     total_hist, bin_edges = so.calculate_hist(dat_files[0], args.band, bin_width=args.width)
 

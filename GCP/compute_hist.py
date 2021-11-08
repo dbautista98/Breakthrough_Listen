@@ -57,12 +57,12 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048, notch_filter
     #remove notch filters
     if GBT_band=="L":
         if notch_filter:
-            print("Excluding hits in the range 1200-1341 MHz")
+            #print("Excluding hits in the range 1200-1341 MHz")
             tbl = tbl[(tbl["freqs"] < 1200) | (tbl["freqs"] > 1341)]
     
     if GBT_band=="S":
         if notch_filter:
-            print("Excluding hits in the range 2300-2360 MHz")
+            #print("Excluding hits in the range 2300-2360 MHz")
             tbl = tbl[(tbl["freqs"] < 2300) | (tbl["freqs"] > 2360)]
     
     bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)

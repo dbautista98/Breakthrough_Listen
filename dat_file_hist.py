@@ -10,7 +10,7 @@ if __name__ == "__main__":
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="the directory the .dat files are stored in")
     parser.add_argument("-width", "-w", help="width of bin in MHz", type=float, default=1)
-    parser.add_argument("-notch_filter", "-nf", help="exclude data thta was collected within GBT's notch filter", action="store_true")
+    parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter", action="store_true")
     args = parser.parse_args()
 
     print("Gathering files...", end="")

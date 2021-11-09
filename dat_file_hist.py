@@ -33,5 +33,5 @@ if __name__ == "__main__":
     plt.bar(bin_edges[:-1], total_hist)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
-    plt.title("%s Band Energy Detection Histogram with n=%s files"%(args.band, len(dat_files)))
+    plt.title("%s Band turboSETI Histogram with n=%s files"%(args.band, len(dat_files)))
     plt.savefig("%s_band_turboSETI_hist.pdf"%args.band)

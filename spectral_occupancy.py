@@ -190,9 +190,9 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
      
     # sum up the number of entries that have a hit and divide by the number of .dat files
     data_labels = df.columns[2:]
-    total = df["file0"]
+    total = df["file0"].values
     for label in data_labels:
-        total = total + df[label]
+        total = total + df[label].values
     
     return bin_edges, total/len(file_list)  
 

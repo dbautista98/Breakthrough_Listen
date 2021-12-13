@@ -1,7 +1,7 @@
 import os 
 import numpy as np
 
-bands = ["L", "S"]
+bands = ["X", "C"]
 thresholds = 2**np.arange(16)
 data_dir = "/home/dbautista98/spectral_occupancy/" 
 script_path = "/home/dbautista98/Breakthrough_Listen/GCP/compare_spectral_occupancy.py"

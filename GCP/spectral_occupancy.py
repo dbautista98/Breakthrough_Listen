@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-# import pandas
 import turbo_seti.find_event as find
 import glob
 import argparse

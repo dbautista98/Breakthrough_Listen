@@ -202,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("folder", help="directory containing the folders which store the energy detection output")
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
-    parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 2048", type=float, default=2048)
+    parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
     args = parser.parse_args()
 

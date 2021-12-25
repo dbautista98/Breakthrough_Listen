@@ -58,7 +58,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="determines the fraction of fine channels that have hits in a spectral occupancy bin")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="directory containing the folders which store the energy detection output")
-    parser.add_argument("-width", "-w", help="width of the spectral occupancy bin in Mhz", type=float, default=1)
+    parser.add_argument("-width", "-w", help="width of the spectral occupancy bin in Mhz. Default is 1MHz", type=float, default=1)
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     parser.add_argument("-fine", "-f", help="width of fine channel in MHz. This needs to be updated to have the correct fine channel width. Default width is 3MHz/2^20 for HSR files per Lebofsky et al 2019", type=float, default=fine_channel_width)
     args = parser.parse_args()

@@ -54,12 +54,13 @@ def one_file(csv_data, GBT_band, bin_width=1, fine_channel_width=1e-6):
 
 
 if __name__ == "__main__":
+    fine_channel_width = 3/(2**20) # Lebofsky et al 2019 for HSR (high spectral resolution) files 
     parser = argparse.ArgumentParser(description="determines the fraction of fine channels that have hits in a spectral occupancy bin")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="directory containing the folders which store the energy detection output")
     parser.add_argument("-width", "-w", help="width of the spectral occupancy bin in Mhz", type=float, default=1)
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
-    parser.add_argument("-fine", "-f", help="width of fine channel in MHz. This needs to be updated to have the correct fine channel width", type=float, default=1e-6)
+    parser.add_argument("-fine", "-f", help="width of fine channel in MHz. This needs to be updated to have the correct fine channel width. Default width is 3MHz/2^20 for HSR files per Lebofsky et al 2019", type=float, default=fine_channel_width)
     args = parser.parse_args()
 
     files = glob.glob(args.folder+"/*")
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
     print("Saving fine channel data")
     to_save = {"fine channel fraction":dataset_fractions, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}
-    filename = "energy_detection_%s_band_fine_channel_fraction_%s_MHz_bins.pkl"%(args.band, args.width)
+    filename = "energy_detection_%s_band_fine_channel_fraction_.pkl"%(args.band)
     with open(filename, "wb") as f:
         pickle.dump(to_save, f)
 

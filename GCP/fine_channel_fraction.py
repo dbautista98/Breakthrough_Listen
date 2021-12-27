@@ -58,12 +58,10 @@ def one_file(csv_data, GBT_band, bin_width=1, fine_channel_width=1e-6, notch_fil
     # remove notch filters
     if GBT_band=="L":
         if notch_filter:
-            print("Excluding hits in the range 1200-1341 MHz")
             df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
     
     if GBT_band=="S":
         if notch_filter:
-            print("Excluding hits in the range 2300-2360 MHz")
             df = df[(df["freq"] < 2300) | (df["freq"] > 2360)]
     
     return df["fractions"].values, df["freq"].values

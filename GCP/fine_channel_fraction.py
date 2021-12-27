@@ -32,7 +32,7 @@ def interval_fraction(tbl, start, stop, fine_channel_width=1e-6):
     fraction = np.sum((hist > 0))/len(hist)
     return fraction
 
-def one_file(csv_data, GBT_band, bin_width=1, fine_channel_width=1e-6):
+def one_file(csv_data, GBT_band, bin_width=1, fine_channel_width=1e-6, notch_filter=False):
     # band boundaries as listed in Traas 2021
     if GBT_band=="L":
         min_freq = 1100
@@ -50,7 +50,23 @@ def one_file(csv_data, GBT_band, bin_width=1, fine_channel_width=1e-6):
     bin_fractions = np.empty_like(spectral_occupancy_bins)
     for i in range(len(spectral_occupancy_bins)):
         bin_fractions[i] = interval_fraction(csv_data, spectral_occupancy_bins[i], spectral_occupancy_bins[i] + 1, fine_channel_width=fine_channel_width)
-    return bin_fractions
+    
+    # store data in dataframe to remove notch filter
+    data = {"freq":spectral_occupancy_bins, "fractions":bin_fractions}
+    df = pd.DataFrame(data)
+
+    # remove notch filters
+    if GBT_band=="L":
+        if notch_filter:
+            print("Excluding hits in the range 1200-1341 MHz")
+            df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
+    
+    if GBT_band=="S":
+        if notch_filter:
+            print("Excluding hits in the range 2300-2360 MHz")
+            df = df[(df["freq"] < 2300) | (df["freq"] > 2360)]
+    
+    return df["fractions"].values, df["freq"].values
 
 
 if __name__ == "__main__":
@@ -60,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("folder", help="directory containing the folders which store the energy detection output")
     parser.add_argument("-width", "-w", help="width of the spectral occupancy bin in Mhz. Default is 1MHz", type=float, default=1)
     parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
+    parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-fine", "-f", help="width of fine channel in MHz. This needs to be updated to have the correct fine channel width. Default width is 3MHz/2^20 for HSR files per Lebofsky et al 2019", type=float, default=default_fine_channel_width)
     args = parser.parse_args()
 
@@ -72,15 +89,15 @@ if __name__ == "__main__":
         header = (files[i] + "/header.pkl")
     
         tbl = read_data(data, header, threshold=args.threshold)
-        bin_fractions = one_file(tbl, args.band)
+        bin_fractions, frequency_bins = one_file(tbl, args.band, bin_width=args.width, fine_channel_width=args.fine, notch_filter=args.notch_filter)
         dataset_fractions += bin_fractions
 
     # normalize data by number of files
     dataset_fractions = dataset_fractions/n_files
 
     print("Saving fine channel data")
-    to_save = {"fine channel fraction":dataset_fractions, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}
-    filename = "energy_detection_%s_band_fine_channel_fraction_.pkl"%(args.band)
+    to_save = {"fine channel fraction":dataset_fractions, "frequency bin":frequency_bins, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}
+    filename = "energy_detection_%s_band_fine_channel_fraction.pkl"%(args.band)
     with open(filename, "wb") as f:
         pickle.dump(to_save, f)
 

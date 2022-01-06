@@ -48,5 +48,6 @@ dependencies:
     - pyyaml==5.4.1
     - scipy==1.6.1
     - six==1.15.0
+    - tqdm
     - toolz==0.11.1
     - turbo-seti @ git+https://github.com/UCBerkeleySETI/turbo_seti@a1e1c122ed1cba560d37975b25c146514b3c8ccf

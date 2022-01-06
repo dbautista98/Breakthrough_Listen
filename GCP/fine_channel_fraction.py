@@ -177,20 +177,27 @@ if __name__ == "__main__":
     files = glob.glob(args.folder+"/*")
     dataset_fractions = 0
     n_files = len(files)
+    filenames, file_fractions = [], []
     print("Processing files...")
     for i in trange(len(files)):
         data = (files[i]+"/all_info_df.csv")
         header = (files[i] + "/header.pkl")
-    
+        file_name = (files[i].split("/")[-1])
         tbl = read_data(data, header, threshold=args.threshold)
         bin_fractions, frequency_bins = one_file(tbl, args.band, bin_width=args.width, fine_channel_width=args.fine, notch_filter=args.notch_filter)
         dataset_fractions += bin_fractions
+        filenames.append(file_name)
+        file_fractions.append(bin_fractions)
 
     # normalize data by number of files
     dataset_fractions = dataset_fractions/n_files
 
+    # make dataframe of fraction data for all files
+    file_fractions = np.array(file_fractions)
+    df = pd.DataFrame(data=file_fractions.T, index=frequency_bins, columns=filenames)
+
     print("Saving fine channel data")
-    to_save = {"fine channel fraction":dataset_fractions, "frequency bin":frequency_bins, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}
+    to_save = {"fine channel fraction":dataset_fractions, "frequency bin":frequency_bins, "dataframe":df, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}
     filename = "energy_detection_%s_band_fine_channel_fraction.pkl"%(args.band)
     with open(filename, "wb") as f:
         pickle.dump(to_save, f)

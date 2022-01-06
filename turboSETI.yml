@@ -24,7 +24,7 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - pip:
     - astropy==4.2
-    - blimpy==2.0.10
+    - blimpy @ git+https://github.com/UCBerkeleySETI/blimpy@69dcd708753bc32123b14a4eef57feec91b4c87b
     - cloudpickle==1.6.0
     - cycler==0.10.0
     - cython==0.29.22
@@ -49,5 +49,4 @@ dependencies:
     - scipy==1.6.1
     - six==1.15.0
     - toolz==0.11.1
-    - turbo-seti==2.0.14
-prefix: /home/danielb/.conda/envs/turboSETI
+    - turbo-seti @ git+https://github.com/UCBerkeleySETI/turbo_seti@a1e1c122ed1cba560d37975b25c146514b3c8ccf

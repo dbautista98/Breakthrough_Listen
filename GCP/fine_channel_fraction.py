@@ -195,6 +195,7 @@ if __name__ == "__main__":
     # make dataframe of fraction data for all files
     file_fractions = np.array(file_fractions)
     df = pd.DataFrame(data=file_fractions.T, index=frequency_bins, columns=filenames)
+    df.to_csv("energy_detection_%s_band_fine_channel_fraction.csv"%(args.band))
 
     print("Saving fine channel data")
     to_save = {"fine channel fraction":dataset_fractions, "frequency bin":frequency_bins, "dataframe":df, "bin_width":args.width, "fine_channel_width":args.fine, "band":args.band, "threshold":args.threshold, "algorithm":"energy detection", "n files":len(files)}

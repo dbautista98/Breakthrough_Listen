@@ -5,6 +5,7 @@ import glob
 from tqdm import trange
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the hit counts from a given set of .dat files")
@@ -30,13 +31,24 @@ if __name__ == "__main__":
         total_hist += hist
     print("Done.")
 
+    data_dict = {"frequency":edges[:-1], "count":total_hist}
+    df = pd.DataFrame(data_dict)
+
+    if args.band=="L":
+        if args.notch_filter:
+            print("Excluding hits in the range 1200-1341 MHz")
+            df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
+    
+    if args.band=="S":
+        if args.notch_filter:
+            print("Excluding hits in the range 2300-2360 MHz")
+            df = df[(df["freq"] < 2300) | (df["freq"] > 2360)]
+
+    df.to_csv("%s_band_turboSETI_hist.csv"%args.band)
+
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], total_hist)
+    plt.bar(df["frequency"], df["count"], width=1)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
     plt.title("%s Band turboSETI Histogram with n=%s files"%(args.band, len(dat_files)))
     plt.savefig("%s_band_turboSETI_hist.pdf"%args.band)
-
-    data_dict = {"frequency":edges[:-1], "count":total_hist}
-    df = pd.DataFrame(data_dict)
-    df.to_csv("%s_band_turboSETI_hist.csv"%args.band)

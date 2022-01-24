@@ -150,7 +150,7 @@ if __name__ == "__main__":
     print("Done.")
 
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], total_hist)
+    plt.bar(bin_edges[:-1], total_hist, width=1)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
     plt.title("%s Band Energy Detection Histogram with n=%s files and threshold=%s"%(args.band, len(folder_paths), args.threshold))

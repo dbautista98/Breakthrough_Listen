@@ -37,12 +37,12 @@ if __name__ == "__main__":
     if args.band=="L":
         if args.notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
-            df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
+            df = df[(df["frequency"] < 1200) | (df["frequency"] > 1341)]
     
     if args.band=="S":
         if args.notch_filter:
             print("Excluding hits in the range 2300-2360 MHz")
-            df = df[(df["freq"] < 2300) | (df["freq"] > 2360)]
+            df = df[(df["frequency"] < 2300) | (df["frequency"] > 2360)]
 
     df.to_csv("%s_band_turboSETI_hist.csv"%args.band)
 

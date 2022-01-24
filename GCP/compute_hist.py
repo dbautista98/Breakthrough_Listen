@@ -132,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("-threshold", "-t", help="minimum statistic value that will be preserved, default is 2048", default=2048)
     parser.add_argument("-outdir", "-o", help="directory to store histograms in", default=None)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
+    parser.add_argument("-save", "-s", help="save histogram data in a csv file", action="store_true")
     args = parser.parse_args()
 
     print("Gathering folders...", end="")
@@ -158,4 +159,13 @@ if __name__ == "__main__":
         plt.savefig("%s%s_band_energy_detection_hist_threshold_%s.pdf"%(outdir, args.band, args.threshold))
     else:
         plt.savefig("%s_band_energy_detection_hist_threshold_%s.pdf"%(args.band, args.threshold))
+
+    if args.save:
+        data_dict = {"frequency":edges[:-1], "count":total_hist}
+        df = pd.DataFrame(data_dict)
+        if args.outdir is not None:
+            outdir = args.outdir+"/"
+        else:
+            outdir = ""
+        df.to_csv("%s%s_band_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold))
     print("ALL DONE.")

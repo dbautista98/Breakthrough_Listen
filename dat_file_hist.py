@@ -4,6 +4,7 @@ import argparse
 import glob
 from tqdm import trange
 import matplotlib.pyplot as plt
+import pandas as pd
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the hit counts from a given set of .dat files")
@@ -35,3 +36,7 @@ if __name__ == "__main__":
     plt.ylabel("Count")
     plt.title("%s Band turboSETI Histogram with n=%s files"%(args.band, len(dat_files)))
     plt.savefig("%s_band_turboSETI_hist.pdf"%args.band)
+
+    data_dict = {"frequency":edges[:-1], "count":total_hist}
+    df = pd.DataFrame(data_dict)
+    df.to_csv("%s_band_turboSETI_hist.csv"%args.band)

@@ -66,7 +66,7 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048, notch_filter
             tbl = tbl[(tbl["freqs"] < 2300) | (tbl["freqs"] > 2360)]
     
     bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
-    hist, bin_edges = np.histogram(tbl["freqs"], bins=tbl["freqs"])
+    hist, bin_edges = np.histogram(tbl["freqs"], bins=np.array(tbl["freqs"]))
     del tbl
     return hist, bin_edges
 

@@ -5,7 +5,7 @@ import glob
 from tqdm import trange
 import argparse
 
-def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048, notch_filter=False):
+def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
     """
     calculates a histogram of the number of hits for a single .dat file
     
@@ -22,10 +22,6 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048, notch_filter
     threshold : float
         The minimum statistic for which data will be included
         The default is 2048
-    notch_filter : bool
-        A flag indicating whether or not to remove data 
-        that fell within the notch filter. Note to user:
-        only L and S band have notch filters
         
     Returns
     --------
@@ -54,17 +50,6 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048, notch_filter
         min_freq = 7800
         max_freq = 11200
 
-    #remove notch filters
-    if GBT_band=="L":
-        if notch_filter:
-            #print("Excluding hits in the range 1200-1341 MHz")
-            tbl = tbl[(tbl["freqs"] < 1200) | (tbl["freqs"] > 1341)]
-    
-    if GBT_band=="S":
-        if notch_filter:
-            #print("Excluding hits in the range 2300-2360 MHz")
-            tbl = tbl[(tbl["freqs"] < 2300) | (tbl["freqs"] > 2360)]
-    
     bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
     del tbl
@@ -149,16 +134,29 @@ if __name__ == "__main__":
 
     csv_name = "/all_info_df.csv"
     print("Calculating first histogram...", end="")
-    total_hist, bin_edges = calculate_hist(folder_paths[0]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold), notch_filter=args.notch_filter)
+    total_hist, bin_edges = calculate_hist(folder_paths[0]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold))
     print("Done.")
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
-        hist, edges = calculate_hist(folder_paths[i+1]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold), notch_filter=args.notch_filter)
+        hist, edges = calculate_hist(folder_paths[i+1]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold))
         total_hist += hist
     print("Done.")
 
+    data_dict = {"frequency":edges[:-1], "count":total_hist}
+    df = pd.DataFrame(data_dict)
+
+    if args.band=="L":
+        if args.notch_filter:
+            print("Excluding hits in the range 1200-1341 MHz")
+            df = df[(df["frequency"] < 1200) | (df["frequency"] > 1341)]
+    
+    if args.band=="S":
+        if args.notch_filter:
+            print("Excluding hits in the range 2300-2360 MHz")
+            df = df[(df["frequency"] < 2300) | (df["frequency"] > 2360)]
+
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], total_hist, width=1)
+    plt.bar(df["frequency"], df["count"], width=1)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
     plt.title("%s Band Energy Detection Histogram with n=%s files and threshold=%s"%(args.band, len(folder_paths), args.threshold))

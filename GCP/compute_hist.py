@@ -167,8 +167,6 @@ if __name__ == "__main__":
         plt.savefig("%s_band_energy_detection_hist_threshold_%s.pdf"%(args.band, args.threshold))
 
     if args.save:
-        data_dict = {"frequency":edges[:-1], "count":total_hist}
-        df = pd.DataFrame(data_dict)
         if args.outdir is not None:
             outdir = args.outdir+"/"
         else:

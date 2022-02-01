@@ -5,14 +5,15 @@ import glob
 from tqdm import trange
 import argparse
 
-def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
+def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048):
     """
     calculates a histogram of the number of hits for a single .dat file
     
     Arguments
     ----------
-    csv_file : str
-        filepath to the .csv file
+    tbl : pandas.core.frame.DataFrame
+        DataFrame containing the data from running the 
+        Energy Detection algorithm on an observation
     GBT_band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
@@ -31,9 +32,8 @@ def calculate_hist(csv_file, GBT_band, bin_width=1, threshold=2048):
         the edge values of each bin. Has length Nbins+1
     """
     
-    # read in the data
-    tbl = pd.read_csv(csv_file)
-    tbl = tbl.iloc[np.where(tbl["statistic"] > threshold)]
+    # reduce the data
+    tbl = tbl[tbl["statistic"] >= threshold]
 
     # make the bins of the histogram
     # band boundaries as listed in Traas 2021
@@ -99,7 +99,7 @@ def grab_parameters(header):
     num_course_channels = header["nchans"]/nfpc
     return fch1, foff, nfpc, num_course_channels
 
-def remove_DC_spikes(df, header_path):#freqs_fine_channels_list, foff):
+def remove_DC_spikes(df, header_path):
     header = read_header(header_path)
     fch1, foff, nfpc, num_course_channels = grab_parameters(header)
     spike_channels_list = spike_channels(num_course_channels, nfpc)
@@ -134,11 +134,13 @@ if __name__ == "__main__":
 
     csv_name = "/all_info_df.csv"
     print("Calculating first histogram...", end="")
-    total_hist, bin_edges = calculate_hist(folder_paths[0]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold))
+    first_file = pd.read_csv(folder_paths[0]+csv_name)
+    total_hist, bin_edges = calculate_hist(first_file, args.band, bin_width=args.width, threshold=float(args.threshold))
     print("Done.")
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
-        hist, edges = calculate_hist(folder_paths[i+1]+csv_name, args.band, bin_width=args.width, threshold=float(args.threshold))
+        this_file = pd.read_csv(folder_paths[i+1]+csv_name)
+        hist, edges = calculate_hist(this_file, args.band, bin_width=args.width, threshold=float(args.threshold))
         total_hist += hist
     print("Done.")
 

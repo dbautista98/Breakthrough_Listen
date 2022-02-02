@@ -1,6 +1,3 @@
-#TODO: replace chi square with something else, possibly RMSE
-
-from bdb import Breakpoint
 import pandas as pd
 import numpy as np
 import glob
@@ -69,8 +66,8 @@ def RMSE(true, observed):
     """
     residuals = true - observed
     if len(observed.shape) > 1:
-        return np.sqrt( np.sum(residuals**2, axis=1) / len(true))
-    return np.sqrt( np.sum(residuals**2) / len(true))
+        return np.sqrt( np.sum(residuals**2, axis=1) / len(residuals))
+    return np.sqrt( np.sum(residuals**2) / len(residuals))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="compares energy detection histograms under a range of threshold values to the turboSETI histogram")
@@ -85,7 +82,7 @@ if __name__ == "__main__":
 
 
     # establish the threshold range
-    thresholds = np.logspace(11, 13, num=50, base=2)
+    thresholds = np.logspace(11, 14, num=50, base=2)
 
     # collect the folders
     print("Gathering folders...", end="")
@@ -140,20 +137,12 @@ if __name__ == "__main__":
         print("\tlen(energy detection):  ", len(df["frequency"]))
     turbo_seti_count = turbo_seti["count"].values
 
-    # TODO change this to RMSE
-    # chi_squares = np.empty_like(thresholds)
-    # for i in range(len(thresholds)):
-    #     ed = np.array(df[threshold_keys[i]])
-    #     ts = turbo_seti_count
-    #     print(len(ed))
-    #     print(len(ts))
-    #     chi_squares[i] = stats.chisquare(ed, f_exp=ts)
-
-    # replacement for above
+    # calculate the RMSE
     ed = np.array(df[threshold_keys]).T
     ts = turbo_seti_count
     all_rmse = RMSE(ts, ed)
     
+    # store results
     results_dict = {"threshold":thresholds, "RMSE":all_rmse}
     results_df = pd.DataFrame(results_dict)
     if args.outdir is not None:
@@ -162,5 +151,6 @@ if __name__ == "__main__":
         outdir = ""
     results_df.to_csv("%s%s_band_multiple_thresholds_RMSE.csv"%(outdir, args.band))
     
+    # print the best threshold
     best_threshold = threshold_keys[np.argmin(all_rmse)]
     print("The best threshold value is:", best_threshold)

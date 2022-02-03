@@ -165,11 +165,6 @@ if __name__ == "__main__":
                 os.mkdir(outdir)
         print("Saving plots...", end="")
         for thresh in threshold_keys:
-            print("DEBUG::")
-            # print(type(bin_edges))
-            print("\tfrequency:       ", (df["frequency"].shape))
-            print("\tenergy detection:", (df[thresh].values.shape))
-            print("\tturboSETI:       ", (turbo_seti_count.shape))
             plt.figure(figsize=(20,10))
             plt.bar(df["frequency"].values, df[thresh].values, width=1, label="energy detection", alpha=0.5)
             plt.bar(df["frequency"].values, turbo_seti_count, width=1, label="turboSETI", alpha=0.5)

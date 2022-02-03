@@ -4,6 +4,8 @@ import glob
 import argparse
 from tqdm import trange
 from scipy import stats
+import os
+import matplotlib.pyplot as plt
 import compute_hist as ch
 
 def multi_hist(df, GBT_band, threshold_arr, bin_width=1):
@@ -78,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", "-o", help="directory to store histograms in", default=None)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when processing the data", action="store_true")
     parser.add_argument("-save", "-s", help="save histogram data in a csv file", action="store_true")
+    parser.add_argument("-plot", "-p", help="plot and save the genereated histograms", action="store_true")
     args = parser.parse_args()
 
 
@@ -150,6 +153,32 @@ if __name__ == "__main__":
     else:
         outdir = ""
     results_df.to_csv("%s%s_band_multiple_thresholds_RMSE.csv"%(outdir, args.band))
+
+    if args.plot:
+        if args.outdir is not None:
+            outdir = args.outdir+"/%s_band_histogram_plots/"%args.band
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+        else:
+            outdir = "%s_band_histogram_plots/"%args.band
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+        print("Saving plots...", end="")
+        for thresh in threshold_keys:
+            print("DEBUG::")
+            # print(type(bin_edges))
+            print("\tfrequency:       ", (df["frequency"].shape))
+            print("\tenergy detection:", (df[thresh].values.shape))
+            print("\tturboSETI:       ", (turbo_seti_count.shape))
+            plt.figure(figsize=(20,10))
+            plt.bar(df["frequency"].values, df[thresh].values, width=1, label="energy detection", alpha=0.5)
+            plt.bar(df["frequency"].values, turbo_seti_count, width=1, label="turboSETI", alpha=0.5)
+            plt.legend()
+            plt.xlabel("Frequency [MHz]")
+            plt.ylabel("count")
+            plt.title("turboSETI vs Energy Detection (threshold = %s)"%thresh)
+            savepath = outdir + "%s_band_turboSETI_vs_energy_detection_histogram_threshold_%s.pdf"%(args.band, thresh)
+            plt.savefig(savepath, bbox_inches="tight", transparent=False)
     
     # print the best threshold
     best_threshold = threshold_keys[np.argmin(all_rmse)]

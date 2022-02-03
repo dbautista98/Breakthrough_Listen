@@ -233,9 +233,9 @@ if __name__ == "__main__":
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], prob_hist, width = .99) 
+    plt.bar(bin_edges[:-1], prob_hist, width=1)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy: n=%s"%len(dat_files))
-    plt.savefig("%s_band_spectral_occupancy.pdf"%args.band)
+    plt.savefig("%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

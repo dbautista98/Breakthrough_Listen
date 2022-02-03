@@ -174,6 +174,7 @@ if __name__ == "__main__":
             plt.title("turboSETI vs Energy Detection (threshold = %s)"%thresh)
             savepath = outdir + "%s_band_turboSETI_vs_energy_detection_histogram_threshold_%s.pdf"%(args.band, thresh)
             plt.savefig(savepath, bbox_inches="tight", transparent=False)
+            plt.close("all")
     
     # print the best threshold
     best_threshold = threshold_keys[np.argmin(all_rmse)]

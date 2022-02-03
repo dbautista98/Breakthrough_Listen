@@ -164,17 +164,18 @@ if __name__ == "__main__":
             if not os.path.exists(outdir):
                 os.mkdir(outdir)
         print("Saving plots...", end="")
-        for thresh in threshold_keys:
+        for i in trange(len(threshold_keys)):
             plt.figure(figsize=(20,10))
-            plt.bar(df["frequency"].values, df[thresh].values, width=1, label="energy detection", alpha=0.5)
+            plt.bar(df["frequency"].values, df[threshold_keys[i]].values, width=1, label="energy detection", alpha=0.5)
             plt.bar(df["frequency"].values, turbo_seti_count, width=1, label="turboSETI", alpha=0.5)
             plt.legend()
             plt.xlabel("Frequency [MHz]")
             plt.ylabel("count")
-            plt.title("turboSETI vs Energy Detection (threshold = %s)"%thresh)
-            savepath = outdir + "%s_band_turboSETI_vs_energy_detection_histogram_threshold_%s.pdf"%(args.band, thresh)
+            plt.title("turboSETI vs Energy Detection (threshold = %s)"%threshold_keys[i])
+            savepath = outdir + "%s_band_turboSETI_vs_energy_detection_histogram_threshold_%s.pdf"%(args.band, threshold_keys[i])
             plt.savefig(savepath, bbox_inches="tight", transparent=False)
             plt.close("all")
+        print("Done saving plots.")
     
     # print the best threshold
     best_threshold = threshold_keys[np.argmin(all_rmse)]

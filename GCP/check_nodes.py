@@ -87,6 +87,29 @@ def boxcar_analysis(df, nodes, boundaries):
 
     return means, st_devs
 
+def format_energy_detection(df, threshold=4096):
+    """
+    renames energy detection columns and makes threshold cuts
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing processed data from an observation
+    threshold : float
+        The minimum value of an allowed hit, below which
+        all will be rejected
+
+    Returns
+    --------
+    reduced_df : pandas.core.frame.DataFrame
+        DataFrame with renamed frequency column and 
+        thresholded above the given statistic value
+    """
+    df.rename(columns={"freqs":"frequency"}, inplace=True)
+    mask = np.where(df["statistic"] >= threshold)
+    reduced_df = df.iloc[mask]
+    return reduced_df
+
 if __name__ == "__main__":
     df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
     df.rename(columns={"freqs":"frequency"}, inplace=True)

@@ -273,7 +273,7 @@ if __name__ == "__main__":
         full_run = input("Do you want to run full program? y/n\n")
         if full_run == "y":
             node_summary = energy_detection_file_summary('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv', 
-                                                        "L", "this is only a test.h5")
+                                                        "X", "this is only a test.h5")
             print(node_summary)
         else:
             df = pd.read_csv('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv')

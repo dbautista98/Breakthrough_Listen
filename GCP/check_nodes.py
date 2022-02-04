@@ -128,6 +128,16 @@ def format_energy_detection(df, threshold=4096):
     reduced_df = df.iloc[mask]
     return reduced_df
 
+def check_missing(results_df):
+    dropped_nodes = []
+    nodes = results_df["nodes"].values
+    has_data = results_df["data present"].values
+    sd = results_df["standard deviation"].values
+    for i in range(len(nodes)):
+        if has_data[i] and np.isclose(sd[i], 0):
+            dropped_nodes.append(nodes[i])
+    return dropped_nodes
+
 if __name__ == "__main__":
     ask_user = input("Is this running in GCP? y/n\n")
     if ask_user == "n":
@@ -141,3 +151,4 @@ if __name__ == "__main__":
     
     results = boxcar_analysis(df, nodes, boundaries)
     print(results)
+    print("Missing nodes:", check_missing(results))

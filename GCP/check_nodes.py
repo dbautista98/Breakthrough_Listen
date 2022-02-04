@@ -79,7 +79,7 @@ def boxcar_analysis(df, nodes, boundaries):
         fch1 = boundaries[i]
         df_subset = select_node(df, fch1)
         bins = np.linspace(fch1, fch1-187.5, num=1875, endpoint=True)
-        hist, bin_edges = np.hisotgram(df_subset["frequency"], bins=bins)
+        hist, bin_edges = np.hisotgram(df_subset["frequency"].values, bins=bins)
         means[i] = np.mean(hist)
         st_devs[i] = np.std(hist)
 

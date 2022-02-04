@@ -249,6 +249,7 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
         # return an empty DataFrame
         return pd.DataFrame()
     summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "algorithm":"energy detection"}
+    print(summary_dict)
     summary_df = pd.DataFrame()
     summary_df.append(summary_dict, ignore_index=True)
     return summary_df

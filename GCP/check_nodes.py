@@ -161,17 +161,24 @@ def check_missing(results_df):
     
     Returns
     --------
-    dropped_nodes : list
-        a list of which compute nodes were dropped 
+    dropped_nodes : str
+        a bitmap string of which nodes are dropped
+        starting with blc00 and ending on the highest blcXX
     """
-    dropped_nodes = []
     nodes = results_df["nodes"].values
     has_data = results_df["data present"].values
     sd = results_df["standard deviation"].values
+    node_drops = []
     for i in range(len(nodes)):
         if has_data[i] and np.isclose(sd[i], 0):
-            dropped_nodes.append(nodes[i])
-    return dropped_nodes
+            node_drops.append(1)
+        else:
+            node_drops.append(0)
+    
+    # convert bitmap to string
+    string_nodes = [str(int) for int in node_drops]
+    bitmap_string = "".join(string_nodes)
+    return bitmap_string
 
 if __name__ == "__main__":
     ask_user = input("Is this running in GCP? y/n\n")

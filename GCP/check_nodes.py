@@ -251,7 +251,7 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "algorithm":"energy detection"}
     temp_df = pd.DataFrame()
     summary_df = temp_df.append(summary_dict, ignore_index=True)
-    return summary_df
+    return summary_df[["filename", "band", "dropped node bitmap", "algorithm"]]
 
 if __name__ == "__main__":
     ask_user = input("Is this running in GCP? y/n\n")

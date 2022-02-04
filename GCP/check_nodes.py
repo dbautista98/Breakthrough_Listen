@@ -69,7 +69,8 @@ def select_node(df, fch1):
         a DataFrame containing only the data within a given compute node
     """
     mask = np.where((df["frequency"] <= fch1) & (df["frequency"] > (fch1 - 187.5)))
-    return df.iloc[mask]
+    reduced_df = df.iloc[mask]
+    return reduced_df
 
 def boxcar_analysis(df, nodes, boundaries):
     
@@ -79,9 +80,17 @@ def boxcar_analysis(df, nodes, boundaries):
     for i in range(len(boundaries)):
         fch1 = boundaries[i]
         df_subset = select_node(df, fch1)
-        bins = np.linspace(fch1, fch1-187.5, num=1875, endpoint=True)
-        hist, bin_edges = np.hisotgram(df_subset["frequency"].values, bins=bins)
+        bins = np.linspace(fch1-187.5, fch1, num=1875, endpoint=True)
+        hist, bin_edges = np.histogram(df_subset["frequency"].values, bins=bins)
         means[i] = np.mean(hist)
         st_devs[i] = np.std(hist)
 
     return means, st_devs
+
+if __name__ == "__main__":
+    df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
+    df.rename(columns={"freqs":"frequency"}, inplace=True)
+    nodes, boundaries = node_boundaries("L")
+    means, sds = boxcar_analysis(df, nodes, boundaries)
+    print(means)
+    print(sds)

@@ -276,6 +276,9 @@ def check_many_files(missing_files_df, data_list, source_list, band_list, thresh
     missing_files_df : pandas.core.frame.DataFrame
         DataFrame of all the files flagged for missing nodes
     """
+    #print("data_list:  ", len(data_list))
+    #print("band_list:  ", len(band_list))
+    #print("source_list:",len(source_list))
     for i in trange(len(data_list)):
         one_file_df = energy_detection_file_summary(data_list[i], band_list[i], source_list[i], threshold=threshold)
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
@@ -297,7 +300,10 @@ if __name__ == "__main__":
             source_file = os.path.basename(source_path)
             source_files.append(source_file)
             csv_paths[i] = csv_paths[i] + "/" + csv_name
-            band_list = list(len(csv_paths)*band)
-            missing_files_df = check_many_files(missing_files_df, csv_paths, source_files, band_list)
+            band_string = band*(len(csv_paths))
+            band_list = list(band_string)
+            #print(source_files)
+            #print(len(band_list))
+        missing_files_df = check_many_files(missing_files_df, csv_paths, source_files, band_list)
 
     print(missing_files_df)

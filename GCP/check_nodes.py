@@ -73,7 +73,27 @@ def select_node(df, fch1):
     return reduced_df
 
 def boxcar_analysis(df, nodes, boundaries):
-    
+    """
+    steps through the frequency intervals corresponding to each 
+    compute node and calculates the mean and standard deviation 
+    of the data in the interval
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing processed data from an observation
+    nodes : list
+        the name of the compute node which the data
+        was processed on
+    boundaries : numpy.ndarray
+        the filterband fch1, as reported in Lebofsky et al 2019
+
+    Returns
+    --------
+    result_df : pandas.core.frame.DataFrame
+        DataFrame summarizing the data within across 
+        all compute nodes
+    """
     means = np.empty_like(boundaries)
     st_devs=np.empty_like(boundaries)
     data_present = np.empty_like(boundaries, dtype=bool)
@@ -129,6 +149,21 @@ def format_energy_detection(df, threshold=4096):
     return reduced_df
 
 def check_missing(results_df):
+    """
+    uses the file summary data to determine if 
+    there were any dropped compute nodes 
+
+    Arguments
+    ----------
+    results_df : pandas.core.frame.DataFrame
+        DataFrame summarizing the data within across 
+        all compute nodes
+    
+    Returns
+    --------
+    dropped_nodes : list
+        a list of which compute nodes were dropped 
+    """
     dropped_nodes = []
     nodes = results_df["nodes"].values
     has_data = results_df["data present"].values

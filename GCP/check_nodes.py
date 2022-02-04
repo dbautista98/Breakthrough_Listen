@@ -276,9 +276,6 @@ def check_many_files(missing_files_df, data_list, source_list, band_list, thresh
     missing_files_df : pandas.core.frame.DataFrame
         DataFrame of all the files flagged for missing nodes
     """
-    #print("data_list:  ", len(data_list))
-    #print("band_list:  ", len(band_list))
-    #print("source_list:",len(source_list))
     for i in trange(len(data_list)):
         one_file_df = energy_detection_file_summary(data_list[i], band_list[i], source_list[i], threshold=threshold)
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
@@ -289,9 +286,10 @@ if __name__ == "__main__":
     data_dir = "/home/dbautista98/energy-detection/"
     source_dir = "/home/dbautista98/data/"
     csv_name = "all_info_df.csv"
-    bands = ["l"]#, "s", "s", "s"]
+    bands = ["l", "s", "s", "s"]
     for band in bands:
         # gather csv files
+        print("gathering %s band files"%(band.upper()))
         source_files = []
         csv_paths = glob.glob(data_dir + "%s-band/*"%band)
         for i in range(len(csv_paths)):
@@ -302,8 +300,10 @@ if __name__ == "__main__":
             csv_paths[i] = csv_paths[i] + "/" + csv_name
             band_string = band*(len(csv_paths))
             band_list = list(band_string)
-            #print(source_files)
-            #print(len(band_list))
+        
+        # search the files
         missing_files_df = check_many_files(missing_files_df, csv_paths, source_files, band_list)
 
+    # save DataFrame
+    missing_files_df.to_csv("dropped_nodes.csv")
     print(missing_files_df)

@@ -1,3 +1,4 @@
+from tabnanny import check
 import pandas as pd
 import numpy as np
 
@@ -180,17 +181,107 @@ def check_missing(results_df):
     bitmap_string = "".join(string_nodes)
     return bitmap_string
 
+def identify_missing_node(bitmap, nodes):
+    """
+    Use the bitmap to identify which nodes are missing
+
+    Arguments
+    ----------
+    bitmap : str
+        A string of ones and zeros (eg: '000100001') indicating whether 
+        a node has been dropped during analysis. A (1) indicates that the 
+        node was dropped and a (0) indicates that the node was included and
+        that nothing went wrong 
+    nodes : list
+        the name of the compute node which the data was processed on
+    
+    Returns
+    --------
+    node_list : list
+        a list of all the nodes that were dropped during data recording
+    """
+    bit_list = np.array(list(bitmap))
+    mask = (bit_list == "1")
+    return list(np.array(nodes)[mask])
+
+def energy_detection_file_summary(csv_path, band, source_file_name, threshold=4096):
+    """
+    Determines if an energy detection file is missing any 
+    nodes. If the file is missing a node(s) this function 
+    will return a pandas DataFrame containing the filename, 
+    band, and a bitmap showing which node(s) dropped
+
+    Arguments
+    ----------
+    csv_path : str
+        filepath to the energy detection csv 
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    source_file_name : str
+        the name of the original .h5 file that the data comes from
+    threshold : float
+        The minimum value of an allowed hit, below which
+        all will be rejected
+
+    Returns
+    --------
+    summary_df : pandas.core.frame.DataFrame
+        A pandas DataFrame containing the information 
+        about the missing nodes. There are two possible
+        outputs: 
+           1)  For a file with no dropped nodes, this 
+               function will return an empty DataFrame
+
+           2)  A DataFrame containing information about
+               the missing nodes, formatted as follows
+
+               filename         band       dropped node bitmap        algorithm
+                 filename.h5     L            00010001                  energy detection
+    """
+    nodes, boundaries = node_boundaries(band)
+    df = pd.read_csv(csv_path)
+    df = format_energy_detection(df, threshold=threshold)
+    results = boxcar_analysis(df, nodes, boundaries)
+    missing_string = check_missing(results)
+    dropped_node_list = identify_missing_node(missing_string, nodes)
+    if len(dropped_node_list) == 0:
+        # return an empty DataFrame
+        return pd.DataFrame()
+    summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "algorithm":"energy detection"}
+    return pd.DataFrame(summary_dict)
+
 if __name__ == "__main__":
     ask_user = input("Is this running in GCP? y/n\n")
     if ask_user == "n":
-        df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
-        df = format_energy_detection(df)
-        nodes, boundaries = node_boundaries("L")
+        full_run = input("Do you want to run full program? y/n\n")
+        if full_run == "y":
+            node_summary = energy_detection_file_summary("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv", 
+                                                        "L", "this is only a test.h5")
+            print(node_summary)
+        else:
+            df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
+            df = format_energy_detection(df)
+            nodes, boundaries = node_boundaries("L")
+            results = boxcar_analysis(df, nodes, boundaries)
+            print(results)
+            missing_string = check_missing(results)
+            print("Missing nodes:", missing_string)
+            print(identify_missing_node(missing_string, nodes))
+            # print(identify_missing_node("01010001", nodes))
     else:
-        df = pd.read_csv('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv')
-        nodes, boundaries = node_boundaries("X")
-        df = format_energy_detection(df)
-    
-    results = boxcar_analysis(df, nodes, boundaries)
-    print(results)
-    print("Missing nodes:", check_missing(results))
+        full_run = input("Do you want to run full program? y/n\n")
+        if full_run == "y":
+            node_summary = energy_detection_file_summary('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv', 
+                                                        "L", "this is only a test.h5")
+            print(node_summary)
+        else:
+            df = pd.read_csv('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv')
+            nodes, boundaries = node_boundaries("X")
+            df = format_energy_detection(df)
+            results = boxcar_analysis(df, nodes, boundaries)
+            print(results)
+            missing_string = check_missing(results)
+            print("Missing nodes:", missing_string)
+            print(identify_missing_node(missing_string, nodes))
+            # print(identify_missing_node("01010001", nodes))

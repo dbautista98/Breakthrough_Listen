@@ -76,6 +76,7 @@ def boxcar_analysis(df, nodes, boundaries):
     
     means = np.empty_like(boundaries)
     st_devs=np.empty_like(boundaries)
+    data_present = np.empty_like(boundaries, dtype=bool)
 
     for i in range(len(boundaries)):
         fch1 = boundaries[i]
@@ -85,11 +86,24 @@ def boxcar_analysis(df, nodes, boundaries):
         if len(df_subset) == 0:
             means[i] = 0
             st_devs[i] = 0
+            data_present[i] = False
+        elif len(df_subset) == 1:
+            means[i] = df_subset["statistic"].values[0]
+            st_devs[i] = 1e9
+            data_present[i] = True
+        elif len(df_subset) == 2:
+            means[i] = np.mean(df_subset["statistic"].values)
+            st_devs[i] = 1e9
+            data_present[i] = True
         else:
             means[i] = np.mean(df_subset["statistic"].values)#np.mean(hist)
             st_devs[i] = np.std(df_subset["statistic"].values)#np.std(hist)
+            data_present[i] = True
+        
+        data_dict = {"nodes":nodes, "fch1":boundaries, "data present":data_present, "mean statistic":means, "standard deviation":st_devs}
+        result_df = pd.DataFrame(data_dict)
 
-    return means, st_devs
+    return result_df#means, st_devs
 
 def format_energy_detection(df, threshold=4096):
     """
@@ -115,9 +129,15 @@ def format_energy_detection(df, threshold=4096):
     return reduced_df
 
 if __name__ == "__main__":
-    df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
-    df.rename(columns={"freqs":"frequency"}, inplace=True)
-    nodes, boundaries = node_boundaries("L")
-    means, sds = boxcar_analysis(df, nodes, boundaries)
-    print(means)
-    print(sds)
+    ask_user = input("Is this running in GCP? y/n\n")
+    if ask_user == "n":
+        df = pd.read_csv("/Users/DanielBautista/Research/data/energy-detection/spliced_blc5051525354555657_guppi_58892_35102_HIP53639_0025/all_info_df.csv")
+        df = format_energy_detection(df)
+        nodes, boundaries = node_boundaries("L")
+    else:
+        df = pd.read_csv('/home/dbautista98/energy-detection/x-band/spliced_blc00010203040506o7o0111213141516o0212224252627_guppi_58806_44811_HIP68589_0132/all_info_df.csv')
+        nodes, boundaries = node_boundaries("X")
+        df = format_energy_detection(df)
+    
+    results = boxcar_analysis(df, nodes, boundaries)
+    print(results)

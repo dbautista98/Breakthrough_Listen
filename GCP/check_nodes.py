@@ -290,15 +290,14 @@ if __name__ == "__main__":
     for band in bands:
         # gather csv files
         source_files = []
-        csv_paths = glob.glob(data_dir + "%s_band/*"%band)
+        csv_paths = glob.glob(data_dir + "%s-band/*"%band)
         for i in range(len(csv_paths)):
             filename = csv_paths[i].split("/")[-1]
             source_path = glob.glob(source_dir + "%s_band/"%band + filename + "*0.h5")[0]
             source_file = os.path.basename(source_path)
             source_files.append(source_file)
             csv_paths[i] = csv_paths[i] + "/" + csv_name
-    print(source_files)
+
     print(csv_paths)
-
-
+    print(source_files)
 

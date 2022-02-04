@@ -68,7 +68,8 @@ def select_node(df, fch1):
     reduced_df : pandas.core.frame.DataFrame
         a DataFrame containing only the data within a given compute node
     """
-    return df[(df["frequency"] <= fch1 & df["frequency"] > (fch1 - 187.5))]
+    mask = np.where((df["frequency"] <= fch1) & (df["frequency"] > (fch1 - 187.5)))
+    return df.iloc[mask]
 
 def boxcar_analysis(df, nodes, boundaries):
     

@@ -250,10 +250,10 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     if len(dropped_node_list) == 0:
         # return an empty DataFrame
         return pd.DataFrame()
-    summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "algorithm":"energy detection"}
+    summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "dropped node":(" ".join(dropped_node_list)), "algorithm":"energy detection"}
     temp_df = pd.DataFrame()
     summary_df = temp_df.append(summary_dict, ignore_index=True)
-    return summary_df[["filename", "band", "dropped node bitmap", "algorithm"]]
+    return summary_df[["filename", "band", "dropped node bitmap", "dropped node", "algorithm"]]
 
 def check_many_files(missing_files_df, data_list, source_list, band_list, threshold=4096):
     """

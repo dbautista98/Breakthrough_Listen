@@ -126,8 +126,8 @@ def check_drops(filename, GBT_band, dropped_df, hist, bin_edges):
         dropped_nodes = missing_row["dropped node"].split(" ")
         boundary_dict = cn.node_boundaries(GBT_band, output="dict")
         for node in dropped_nodes:
-            upper_bound = boundary_dict["node"]
-            lower_bound = boundary_dict["node"] - 187.5
+            upper_bound = boundary_dict[node]
+            lower_bound = boundary_dict[node] - 187.5
             temp_bounds = bin_edges[:-1]
             mask = np.where((temp_bounds <= upper_bound) & (temp_bounds >= lower_bound))
             hist[mask] = 0

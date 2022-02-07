@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import glob
 from tqdm import trange
 import argparse
+import spectral_occupancy as so
+import check_nodes as cn
 
 def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048):
     """
@@ -109,6 +111,28 @@ def remove_DC_spikes(df, header_path):
     keep_mask = np.in1d(freqs, freqs_fine_channels_list, invert=True)
     return df[keep_mask]
 
+def check_drops(filename, GBT_band, dropped_df, hist, bin_edges):
+    this_file = filename.split("/")[-1]
+    drop_files = dropped_df["filename"].values
+    drop_flag = False
+    for i in range(len(drop_files)):
+        short_name = drop_files[i].split(".")[0]
+        if short_name == this_file:
+            drop_flag = True
+            drop_index = i
+            break
+    if drop_flag:
+        missing_row = dropped_df.iloc[drop_index]
+        dropped_nodes = missing_row["dropped node"].split(" ")
+        boundary_dict = cn.node_boundaries(GBT_band, output="dict")
+        for node in dropped_nodes:
+            upper_bound = boundary_dict["node"]
+            lower_bound = boundary_dict["node"] - 187.5
+            temp_bounds = bin_edges[:-1]
+            mask = np.where((temp_bounds <= upper_bound) & (temp_bounds >= lower_bound))
+            hist[mask] = 0
+    return hist
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram from csv files outputted from the energy detection algorithm")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
@@ -118,29 +142,30 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", "-o", help="directory to store histograms in", default=None)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-save", "-s", help="save histogram data in a csv file", action="store_true")
+    parser.add_argument("-check_drops", "-c", help="filepath to the csv file summarizing dropped nodes")
     args = parser.parse_args()
-
-    # print("Band        :", args.band)
-    # print("Folder      :", args.folder)
-    # print("Width       :", args.width)
-    # print("Threshold   :", args.threshold)
-    # print("Outdir      :", args.outdir)
-    # print("Notch Filter:", args.notch_filter)
-    # print("Save        :", args.save)
 
     print("Gathering folders...", end="")
     folder_paths = glob.glob(args.folder+"/*")
     print("Done gathering %s folders"%len(folder_paths))
 
     csv_name = "/all_info_df.csv"
+    pickle_name = "/header.pkl"
     print("Calculating first histogram...", end="")
     first_file = pd.read_csv(folder_paths[0]+csv_name)
     total_hist, bin_edges = calculate_hist(first_file, args.band, bin_width=args.width, threshold=float(args.threshold))
+    if args.check_drops:
+        dropped_df = pd.read_csv(args.check_drops)
+        file_name = folder_paths[0].split("/")[-1]
+        total_hist = check_drops(file_name, args.band, dropped_df, total_hist, bin_edges)
     print("Done.")
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
         this_file = pd.read_csv(folder_paths[i+1]+csv_name)
         hist, edges = calculate_hist(this_file, args.band, bin_width=args.width, threshold=float(args.threshold))
+        if args.check_drops:
+            file_name = folder_paths[i+1].split("/")[-1]
+            hist = check_drops(file_name, args.band, dropped_df, hist, bin_edges)
         total_hist += hist
     print("Done.")
 

@@ -286,7 +286,7 @@ if __name__ == "__main__":
     data_dir = "/home/dbautista98/energy-detection/"
     source_dir = "/home/dbautista98/data/"
     csv_name = "all_info_df.csv"
-    bands = ["l", "s", "s", "s"]
+    bands = ["l", "s", "c", "x"]
     for band in bands:
         # gather csv files
         print("gathering %s band files"%(band.upper()))

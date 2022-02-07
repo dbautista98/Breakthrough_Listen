@@ -4,7 +4,7 @@ from tqdm import trange
 import glob
 import os
 
-def node_boundaries(band):
+def node_boundaries(band, output="default"):
     """
     returns the compute nodes and their boundaries for an observing band
 
@@ -53,6 +53,12 @@ def node_boundaries(band):
                  'blc20', 'blc21', 'blc22', 'blc23', 'blc24', 'blc25', 'blc26', 'blc27', 
                  'blc30', 'blc31', 'blc32', 'blc33', 'blc34', 'blc35', 'blc36', 'blc37']
     
+    if output == "dict":
+        out_dict = {}
+        for i in range(len(boundaries)):
+            out_dict[all_nodes[:len(boundaries)][i]] = boundaries[i]
+        return out_dict
+
     return all_nodes[:len(boundaries)], boundaries
 
 def select_node(df, fch1):

@@ -162,6 +162,13 @@ if __name__ == "__main__":
         total_hist = check_drops(file_name, args.band, dropped_df, total_hist, bin_edges)
     print("Done.")
 
+    # add the individual histogram to a DataFrame
+    all_histograms_df = pd.DataFrame()
+    temp_dict = {"filename":folder_paths[0].split("/")[-1]}
+    for i in range(len(total_hist)):
+        temp_dict[bin_edges[i]] = total_hist[i]
+    all_histograms_df = all_histograms_df.append(temp_dict, ignore_index=True)
+
     # make the rest of the histograms
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
@@ -170,6 +177,12 @@ if __name__ == "__main__":
         if args.check_drops:
             file_name = folder_paths[i+1].split("/")[-1]
             hist = check_drops(file_name, args.band, dropped_df, hist, bin_edges)
+        temp_df = pd.DataFrame()
+        temp_dict = {"filename":folder_paths[i+1].split("/")[-1]}
+        for i in range(len(total_hist)):
+            temp_dict[bin_edges[i]] = hist[i]
+        temp_df = temp_df.append(temp_dict, ignore_index=True)
+        all_histograms_df = all_histograms_df.append(temp_df, ignore_index=True)
         total_hist += hist
     print("Done.")
 
@@ -182,10 +195,21 @@ if __name__ == "__main__":
         if args.notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
             df = df[(df["frequency"] < 1200) | (df["frequency"] > 1341)]
+            column_names = all_histograms_df.columns[:-1]
+            all_freq_keys = column_names.astype(float)
+            mask = np.where((all_freq_keys < 1200) | (all_freq_keys > 1341))
+            keep_keys = all_freq_keys[mask]
+            all_histograms_df = all_histograms_df[ ["filename", *list(keep_keys)]]
+
     if args.band=="S":
         if args.notch_filter:
             print("Excluding hits in the range 2300-2360 MHz")
             df = df[(df["frequency"] < 2300) | (df["frequency"] > 2360)]
+            column_names = all_histograms_df.columns[:-1]
+            all_freq_keys = column_names.astype(float)
+            mask = np.where((all_freq_keys < 2300) | (all_freq_keys > 2360))
+            keep_keys = all_freq_keys[mask]
+            all_histograms_df = all_histograms_df[ ["filename", *list(keep_keys)]]
 
     # save histogram plot
     plt.figure(figsize=(20, 10))
@@ -206,4 +230,5 @@ if __name__ == "__main__":
         else:
             outdir = ""
         df.to_csv("%s%s_band_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold))
+        all_histograms_df.to_csv("%s%s_band_ALL_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold))
     print("ALL DONE.")

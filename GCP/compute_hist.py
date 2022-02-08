@@ -127,7 +127,7 @@ def check_drops(filename, GBT_band, dropped_df, hist, bin_edges):
         boundary_dict = cn.node_boundaries(GBT_band, output="dict")
         for node in dropped_nodes:
             upper_bound = boundary_dict[node]
-            lower_bound = boundary_dict[node] - 187.5
+            lower_bound = boundary_dict[node] - 188
             temp_bounds = bin_edges[:-1]
             mask = np.where((temp_bounds <= upper_bound) & (temp_bounds >= lower_bound))
             hist[mask] = 0
@@ -145,12 +145,14 @@ if __name__ == "__main__":
     parser.add_argument("-check_drops", "-c", help="filepath to the csv file summarizing dropped nodes")
     args = parser.parse_args()
 
+    # gather the folders
     print("Gathering folders...", end="")
     folder_paths = glob.glob(args.folder+"/*")
     print("Done gathering %s folders"%len(folder_paths))
-
     csv_name = "/all_info_df.csv"
     pickle_name = "/header.pkl"
+
+    # make the first histogram
     print("Calculating first histogram...", end="")
     first_file = pd.read_csv(folder_paths[0]+csv_name)
     total_hist, bin_edges = calculate_hist(first_file, args.band, bin_width=args.width, threshold=float(args.threshold))
@@ -159,6 +161,8 @@ if __name__ == "__main__":
         file_name = folder_paths[0].split("/")[-1]
         total_hist = check_drops(file_name, args.band, dropped_df, total_hist, bin_edges)
     print("Done.")
+
+    # make the rest of the histograms
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
         this_file = pd.read_csv(folder_paths[i+1]+csv_name)
@@ -169,19 +173,21 @@ if __name__ == "__main__":
         total_hist += hist
     print("Done.")
 
+    # store the histogram in a DataFrame
     data_dict = {"frequency":edges[:-1], "count":total_hist}
     df = pd.DataFrame(data_dict)
 
+    # remove notch fileter frequencies 
     if args.band=="L":
         if args.notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
             df = df[(df["frequency"] < 1200) | (df["frequency"] > 1341)]
-    
     if args.band=="S":
         if args.notch_filter:
             print("Excluding hits in the range 2300-2360 MHz")
             df = df[(df["frequency"] < 2300) | (df["frequency"] > 2360)]
 
+    # save histogram plot
     plt.figure(figsize=(20, 10))
     plt.bar(df["frequency"], df["count"], width=1)
     plt.xlabel("Frequency [MHz]")
@@ -193,6 +199,7 @@ if __name__ == "__main__":
     else:
         plt.savefig("%s_band_energy_detection_hist_threshold_%s.pdf"%(args.band, args.threshold))
 
+    # save histogram DataFrame as a csv
     if args.save:
         if args.outdir is not None:
             outdir = args.outdir+"/"

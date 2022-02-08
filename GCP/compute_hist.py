@@ -222,6 +222,12 @@ if __name__ == "__main__":
         total_hist += hist
     print("Done.")
 
+    # restructure DataFrame
+    keep_keys = ["filename"]
+    for i in range(len(bin_edges[:-1])):
+        keep_keys.append(bin_edges[i])
+    all_histograms_df = all_histograms_df[keep_keys]
+
     # store the histogram in a DataFrame
     data_dict = {"frequency":edges[:-1], "count":total_hist}
     df = pd.DataFrame(data_dict)
@@ -231,7 +237,7 @@ if __name__ == "__main__":
         if args.notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
             df = df[(df["frequency"] < 1200) | (df["frequency"] > 1341)]
-            column_names = all_histograms_df.columns[:-1]
+            column_names = all_histograms_df.columns[1:]
             all_freq_keys = column_names.astype(float)
             mask = np.where((all_freq_keys < 1200) | (all_freq_keys > 1341))
             keep_keys = all_freq_keys[mask]
@@ -241,7 +247,7 @@ if __name__ == "__main__":
         if args.notch_filter:
             print("Excluding hits in the range 2300-2360 MHz")
             df = df[(df["frequency"] < 2300) | (df["frequency"] > 2360)]
-            column_names = all_histograms_df.columns[:-1]
+            column_names = all_histograms_df.columns[1:]
             all_freq_keys = column_names.astype(float)
             mask = np.where((all_freq_keys < 2300) | (all_freq_keys > 2360))
             keep_keys = all_freq_keys[mask]

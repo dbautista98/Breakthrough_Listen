@@ -2,6 +2,14 @@ import os
 import numpy as np
 
 
+"""
+DESCRIPTION:
+
+This program will compute the histograms of all the energy detection outputs and checks them against files 
+with missing compute nodes. It also saves a csv of the corresponding histograms. Additionally, it will save
+a csv containing the histogram of each file in the dataset
+"""
+
 
 bands = ["L", "S", "X", "C"]
 thresholds = [4096]#2**np.arange(16)

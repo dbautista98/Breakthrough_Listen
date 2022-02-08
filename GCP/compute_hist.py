@@ -61,7 +61,7 @@ def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048, check_dropped=Fal
         min_freq = 7800
         max_freq = 11200
 
-    bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
+    bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
     if check_dropped:
         hist = check_drops(filename, GBT_band, dropped_df, hist, bin_edges)

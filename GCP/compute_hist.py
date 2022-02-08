@@ -7,7 +7,7 @@ import argparse
 import spectral_occupancy as so
 import check_nodes as cn
 
-def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048):
+def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048, check_dropped=False, filename=None, dropped_df=None):
     """
     calculates a histogram of the number of hits for a single .dat file
     
@@ -25,6 +25,15 @@ def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048):
     threshold : float
         The minimum statistic for which data will be included
         The default is 2048
+    check_dropped : bool
+        flag to determine whether or not to exclude regions
+        of the spectrum that come from dropped compute nodes
+    filename : str
+        name of the source file that the data comes from. This
+        is used to look up whether the file is missing nodes
+    dropped_df : pandas.core.frame.DataFrame
+        the DataFrame containing information about the 
+        files with dropped nodes
         
     Returns
     --------
@@ -54,6 +63,8 @@ def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048):
 
     bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
+    if check_dropped:
+        hist = check_drops(filename, GBT_band, dropped_df, hist, bin_edges)
     del tbl
     return hist, bin_edges
 
@@ -112,6 +123,30 @@ def remove_DC_spikes(df, header_path):
     return df[keep_mask]
 
 def check_drops(filename, GBT_band, dropped_df, hist, bin_edges):
+    """
+    Arguments
+    ----------
+    filename : str
+        name of the source file that the data comes from. This
+        is used to look up whether the file is missing nodes
+    GBT_band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    dropped_df : pandas.core.frame.DataFrame
+        the DataFrame containing information about the 
+        files with dropped nodes
+    hist : numpy.ndarray 
+        the original count of hits in each bin
+    bin_edges : numpy.ndarray
+        the edge values of each bin. Has length Nbins+1
+    
+    
+    Returns
+    --------
+    hist : numpy.ndarray 
+        the count of hits in each bin after correcting for 
+        dropped compute nodes
+    """
     this_file = filename.split("/")[-1]
     drop_files = dropped_df["filename"].values
     drop_flag = False
@@ -154,12 +189,14 @@ if __name__ == "__main__":
 
     # make the first histogram
     print("Calculating first histogram...", end="")
-    first_file = pd.read_csv(folder_paths[0]+csv_name)
-    total_hist, bin_edges = calculate_hist(first_file, args.band, bin_width=args.width, threshold=float(args.threshold))
     if args.check_drops:
         dropped_df = pd.read_csv(args.check_drops)
-        file_name = folder_paths[0].split("/")[-1]
-        total_hist = check_drops(file_name, args.band, dropped_df, total_hist, bin_edges)
+    else:
+        dropped_df = None
+    first_file = pd.read_csv(folder_paths[0]+csv_name)
+    file_name = folder_paths[0].split("/")[-1]
+    total_hist, bin_edges = calculate_hist(first_file, args.band, bin_width=args.width, threshold=float(args.threshold), 
+                                            check_dropped=args.check_drops, filename=file_name, dropped_df=dropped_df)
     print("Done.")
 
     # add the individual histogram to a DataFrame
@@ -173,10 +210,9 @@ if __name__ == "__main__":
     print("Calculating remaining histograms...", end="")
     for i in trange(len(folder_paths)-1):
         this_file = pd.read_csv(folder_paths[i+1]+csv_name)
-        hist, edges = calculate_hist(this_file, args.band, bin_width=args.width, threshold=float(args.threshold))
-        if args.check_drops:
-            file_name = folder_paths[i+1].split("/")[-1]
-            hist = check_drops(file_name, args.band, dropped_df, hist, bin_edges)
+        file_name = folder_paths[i+1].split("/")[-1]
+        hist, edges = calculate_hist(this_file, args.band, bin_width=args.width, threshold=float(args.threshold),
+                                      check_dropped=args.check_drops, filename=file_name, dropped_df=dropped_df)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":folder_paths[i+1].split("/")[-1]}
         for i in range(len(total_hist)):

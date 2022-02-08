@@ -118,7 +118,7 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
     if GBT_band=="X":
         min_freq = 7800
         max_freq = 11200
-    bins = np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width) , endpoint=True)
+    bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width) , endpoint=True)
     hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges
 
@@ -170,7 +170,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
         df.insert(len(df.columns), colname, found_hit.astype(int))
     
     #exclude entries in the GBT data due to the notch filter exclusion
-    bin_edges = np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width), endpoint=True)
+    bin_edges = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width), endpoint=True)
     if GBT_band=="L":
         if notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")

@@ -271,6 +271,6 @@ if __name__ == "__main__":
             outdir = args.outdir+"/"
         else:
             outdir = ""
-        df.to_csv("%s%s_band_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold))
-        all_histograms_df.to_csv("%s%s_band_ALL_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold))
+        df.to_csv("%s%s_band_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold), index=False)
+        all_histograms_df.to_csv("%s%s_band_ALL_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold), index=False)
     print("ALL DONE.")

@@ -8,7 +8,7 @@ import os
 import matplotlib.pyplot as plt
 import compute_hist as ch
 
-def multi_hist(df, GBT_band, threshold_arr, bin_width=1):
+def multi_hist(df, GBT_band, threshold_arr, bin_width=1, check_dropped=False, filename=None, dropped_df=None):
     """
     creates multiple histograms of the energy detection 
     results with different threshold values 
@@ -38,14 +38,16 @@ def multi_hist(df, GBT_band, threshold_arr, bin_width=1):
     """
 
     # make the first histogram
-    first_hist, bin_edges = ch.calculate_hist(tbl=df, GBT_band=GBT_band, bin_width=bin_width, threshold=threshold_arr[0])
+    first_hist, bin_edges = ch.calculate_hist(tbl=df, GBT_band=GBT_band, bin_width=bin_width, threshold=threshold_arr[0],
+                                                check_dropped=check_dropped, filename=filename, dropped_df=dropped_df)
     histograms = np.empty(shape=(len(threshold_arr), len(first_hist)))
     histograms[0] = first_hist
 
     # make the rest of the histograms
     for i in range(1, len(threshold_arr)):
         thresh = threshold_arr[i]
-        this_hist, bin_edges = ch.calculate_hist(tbl=df, GBT_band=GBT_band, bin_width=bin_width, threshold=thresh)
+        this_hist, bin_edges = ch.calculate_hist(tbl=df, GBT_band=GBT_band, bin_width=bin_width, threshold=thresh, 
+                                               check_dropped=check_dropped, filename=filename, dropped_df=dropped_df)
         histograms[i] = this_hist
     
     return histograms, bin_edges
@@ -81,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when processing the data", action="store_true")
     parser.add_argument("-save", "-s", help="save histogram data in a csv file", action="store_true")
     parser.add_argument("-plot", "-p", help="plot and save the genereated histograms", action="store_true")
+    parser.add_argument("-check_drops", "-c", help="filepath to the csv file summarizing dropped nodes")
     args = parser.parse_args()
 
 
@@ -95,14 +98,22 @@ if __name__ == "__main__":
     # make the first set of histograms
     csv_name = "/all_info_df.csv"
     print("Calculating first histogram...", end="")
+    if args.check_drops:
+        dropped_df = pd.read_csv(args.check_drops)
+    else:
+        dropped_df = None
     first_file = pd.read_csv(folder_paths[0] + csv_name)
-    total_hist, bin_edges = multi_hist(first_file, args.band, thresholds, bin_width=args.width)
+    file_name = folder_paths[0].split("/")[-1]
+    total_hist, bin_edges = multi_hist(first_file, args.band, thresholds, bin_width=args.width, 
+                                        check_dropped=args.check_drops, filename=file_name, dropped_df=dropped_df)
     print("Done.")
 
     # make the rest of the histograms
     for i in trange(len(folder_paths)-1):
         this_file = pd.read_csv(folder_paths[i+1]+csv_name)
-        hist, edges = multi_hist(this_file, args.band, thresholds, bin_width=args.width)
+        file_name = folder_paths[i+1].split("/")[-1]
+        hist, edges = multi_hist(this_file, args.band, thresholds, bin_width=args.width, 
+                                    check_dropped=args.check_drops, filename=file_name, dropped_df=dropped_df)
         total_hist += hist
 
     # store the histogram data in a dataframe

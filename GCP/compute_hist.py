@@ -50,16 +50,16 @@ def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048, check_dropped=Fal
     # band boundaries as listed in Traas 2021
     if GBT_band=="L":
         min_freq = 1100
-        max_freq = 1900
+        max_freq = 1901
     if GBT_band=="S":
         min_freq = 1800
-        max_freq = 2800
+        max_freq = 2801
     if GBT_band=="C":  
         min_freq = 4000
-        max_freq = 7800
+        max_freq = 7801
     if GBT_band=="X":
         min_freq = 7800
-        max_freq = 11200
+        max_freq = 11201
 
     bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
@@ -252,6 +252,15 @@ if __name__ == "__main__":
             mask = np.where((all_freq_keys < 2300) | (all_freq_keys > 2360))
             keep_keys = all_freq_keys[mask]
             all_histograms_df = all_histograms_df[ ["filename", *list(keep_keys)]]
+    
+    # check if including notch filter
+    if not args.notch_filter:
+        if args.band == "L" or args.band == "S":
+            filter_flag = "_with_notch_data"
+        else:
+            filter_flag = ""
+    else:
+        filter_flag = ""
 
     # save histogram plot
     plt.figure(figsize=(20, 10))
@@ -261,9 +270,9 @@ if __name__ == "__main__":
     plt.title("%s Band Energy Detection Histogram with n=%s files and threshold=%s"%(args.band, len(folder_paths), args.threshold))
     if args.outdir is not None:
         outdir = args.outdir+"/"
-        plt.savefig("%s%s_band_energy_detection_hist_threshold_%s.pdf"%(outdir, args.band, args.threshold))
+        plt.savefig("%s%s_band_energy_detection_hist_threshold_%s%s.pdf"%(outdir, args.band, args.threshold, filter_flag))
     else:
-        plt.savefig("%s_band_energy_detection_hist_threshold_%s.pdf"%(args.band, args.threshold))
+        plt.savefig("%s_band_energy_detection_hist_threshold_%s%s.pdf"%(args.band, args.threshold, filter_flag))
 
     # save histogram DataFrame as a csv
     if args.save:
@@ -271,6 +280,6 @@ if __name__ == "__main__":
             outdir = args.outdir+"/"
         else:
             outdir = ""
-        df.to_csv("%s%s_band_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold), index=False)
-        all_histograms_df.to_csv("%s%s_band_ALL_energy_detection_hist_threshold_%s.csv"%(outdir, args.band, args.threshold), index=False)
+        df.to_csv("%s%s_band_energy_detection_hist_threshold_%s%s.csv"%(outdir, args.band, args.threshold, filter_flag), index=False)
+        all_histograms_df.to_csv("%s%s_band_ALL_energy_detection_hist_threshold_%s%s.csv"%(outdir, args.band, args.threshold, filter_flag), index=False)
     print("ALL DONE.")

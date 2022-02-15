@@ -108,16 +108,16 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
     # band boundaries as listed in Traas 2021
     if GBT_band=="L":
         min_freq = 1100
-        max_freq = 1900
+        max_freq = 1901
     if GBT_band=="S":
         min_freq = 1800
-        max_freq = 2800
+        max_freq = 2801
     if GBT_band=="C":
         min_freq = 4000
-        max_freq = 7800
+        max_freq = 7801
     if GBT_band=="X":
         min_freq = 7800
-        max_freq = 11200
+        max_freq = 11201
     bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width) , endpoint=True)
     hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges

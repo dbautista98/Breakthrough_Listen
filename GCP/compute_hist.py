@@ -4,8 +4,14 @@ import matplotlib.pyplot as plt
 import glob
 from tqdm import trange
 import argparse
-from . import spectral_occupancy as so
-from . import check_nodes as cn
+try:
+    import spectral_occupancy as so
+except:
+    from . import spectral_occupancy as so
+try:
+    import check_nodes as cn
+except:
+    from . import check_nodes as cn
 
 def calculate_hist(tbl, GBT_band, bin_width=1, threshold=2048, check_dropped=False, filename=None, dropped_df=None):
     """

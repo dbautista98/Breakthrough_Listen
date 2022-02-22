@@ -58,7 +58,7 @@ def calculate_hist(csv_file, header_file, GBT_band, bin_width=1, threshold=2048)
     if GBT_band=="X":
         min_freq = 7800
         max_freq = 11200
-    bins = np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
+    bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
     del tbl
     return hist, bin_edges
@@ -115,7 +115,7 @@ def calculate_proportion(file_list, header_list, GBT_band, notch_filter=False, b
         df.insert(len(df.columns), colname, found_hit.astype(int))
     
     #exclude entries in the GBT data due to the notch filter exclusion
-    bin_edges = np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width), endpoint=True)
+    bin_edges = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width), endpoint=True)
     if GBT_band=="L":
         if notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
@@ -225,9 +225,9 @@ if __name__ == "__main__":
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], prob_hist, width = .99) 
+    plt.bar(bin_edges[:-1], prob_hist, width=1) 
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy with threshold of %s: n=%s"%(args.threshold, len(files)))
-    plt.savefig("%s_band_spectral_occupancy_thresh_%s_bin_%sMHz.pdf"%(args.band, int(args.threshold), args.width))
+    plt.savefig("%s_band_spectral_occupancy_thresh_%s_bin_%sMHz.pdf"%(args.band, int(args.threshold), args.width), bbox_inches="tight", transparent=False)
     print("Done")

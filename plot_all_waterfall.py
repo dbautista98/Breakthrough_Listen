@@ -196,12 +196,11 @@ if __name__ == "__main__":
     save_dir = "/home/danielb/fall_2021/all_band_plots/"
 
     for ii in range(4):
+        print("Starting", band_dicts[ii]["band_folder"])
         if not os.path.exists(save_dir + band_dicts[ii]["band_folder"]):
             os.mkdir(save_dir + band_dicts[ii]["band_folder"])
-
         if not os.path.exists(save_dir + band_dicts[ii]["band_folder"] + "/spectrum"):
             os.mkdir(save_dir + band_dicts[ii]["band_folder"] + "/spectrum")
-
         if not os.path.exists(save_dir + band_dicts[ii]["band_folder"] + "/waterfall"):
             os.mkdir(save_dir + band_dicts[ii]["band_folder"] + "/waterfall")
         

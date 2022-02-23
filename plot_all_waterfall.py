@@ -4,6 +4,7 @@ import glob
 import matplotlib.pyplot as plt
 import blimpy as bl
 import gc
+import os
 
 def z_score(df):
     """
@@ -133,17 +134,69 @@ def spectrum_and_waterfall(h5_path, f_start, f_stop, spectrum_path, waterfall_pa
     plt.tight_layout()
     plt.savefig(waterfall_path, bbox_inches='tight', transparent=False)
     del hf
-    gc.collect()
     if not show:
         plt.close("all")
+    gc.collect()
     return 
+
+def get_h5_path(mount_path, band):
+    bucket_path = "/".join(mount_path.split("/")[4:])
+    return bucket_path
+
+def plot_band(band_path, band_dict):
+    # flag bins and rank by number of flags
+    band = pd.read_csv(band_path, index_col="filename")
+    sorted_flags = sort_flags(band, min_z=2)
+    
+    # download source file and plot
+    for i in range(len(sorted_flags)):
+        print("Starting file %s of %s"%(i, len(band)-1))
+        one_file = sorted_flags.iloc[i]
+        filename = one_file["filename"]
+        n_flags = one_file["flagged bins"]
+        
+        gcsfuse_mount = glob.glob("/home/gcsfuse/blpc0/bl_tess/"+ band_dict["band_folder"] + "/"+filename+"*0.h5")[0]
+        
+        bucket_path = get_h5_path(gcsfuse_mount, band_dict["band_folder"])
+        download_string = "gsutil cp gs://%s /datax/scratch/danielb/bl_tess/"%bucket_path
+        os.system(download_string)
+        
+        # generate filepaths to save spectrum/waterfall
+        save_dir = "/home/danielb/fall_2021/all_band_plots/%s/"%band_dict["band_folder"]
+        scratch_dir_path = "/datax/scratch/danielb/bl_tess/" + os.path.basename(gcsfuse_mount)
+        spectrum_path = save_dir + "spectrum/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
+        waterfall_path= save_dir+ "waterfall/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
+        
+        # generate and save the plots
+        spectrum_and_waterfall(scratch_dir_path, 
+                                  band_dict["f_start"], 
+                                  band_dict["f_stop"], 
+                                  spectrum_path, 
+                                  waterfall_path, 
+                                  max_load=band_dict["max_load"], 
+                                  show=False)
+        
+        # remove h5 file from scratch folder
+        os.system("rm " + scratch_dir_path)
 
 if __name__ == "__main__":
     # paths to observation histograms
-    lband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/L_band_ALL_energy_detection_hist_threshold_4096_with_notch_data.csv'"
+    lband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/L_band_ALL_energy_detection_hist_threshold_4096_with_notch_data.csv"
     sband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/S_band_ALL_energy_detection_hist_threshold_4096_with_notch_data.csv"
     cband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/C_band_ALL_energy_detection_hist_threshold_4096.csv"
     xband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/X_band_ALL_energy_detection_hist_threshold_4096.csv"
     band_csvs = [lband_csv, sband_csv, cband_csv, xband_csv]
 
-    
+    l_dict = {"band_folder":"l_band", "f_start":1100, "f_stop":1900, "max_load":19.3}
+    s_dict = {"band_folder":"s_band", "f_start":1800, "f_stop":2800, "max_load":19.3}
+    c_dict = {"band_folder":"c_band", "f_start":4000, "f_stop":7800, "max_load":81.1}
+    x_dict = {"band_folder":"x_band", "f_start":7800, "f_stop":11200,"max_load":70.5}
+    band_dicts = [l_dict, s_dict, c_dict, x_dict]
+
+    save_dir = "/home/danielb/fall_2021/all_band_plots/"
+
+    for ii in range(4):
+        if not os.path.exists(save_dir + band_dicts[ii]["band_folder"]):
+            os.mkdir(save_dir + band_dicts[ii]["band_folder"])
+        
+        plot_band(band_csvs[ii], band_dicts[ii])

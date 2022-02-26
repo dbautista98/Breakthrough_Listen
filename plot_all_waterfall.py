@@ -179,6 +179,44 @@ def plot_band(band_path, band_dict):
         # remove h5 file from scratch folder
         os.system("rm " + scratch_dir_path)
 
+def plot_chunk(band_path, band_dict):
+    # flag bins and rank by number of flags
+    band = pd.read_csv(band_path, index_col="filename")
+    sorted_flags = sort_flags(band, min_z=2)
+    temp_dir = "/datax/scratch/danielb/temp_plots/"
+    
+    # download source file and plot
+    for i in range(len(sorted_flags)):
+        print("Starting file %s of %s"%(i, len(band)-1))
+        one_file = sorted_flags.iloc[i]
+        filename = one_file["filename"]
+        n_flags = one_file["flagged bins"]
+        
+        gcsfuse_mount = glob.glob("/home/gcsfuse/blpc0/bl_tess/"+ band_dict["band_folder"] + "/"+filename+"*0.h5")[0]
+        
+        bucket_path = get_h5_path(gcsfuse_mount, band_dict["band_folder"])
+        download_string = "gsutil cp gs://%s /datax/scratch/danielb/bl_tess/"%bucket_path
+        os.system(download_string)
+        
+        # generate filepaths to save spectrum/waterfall
+        save_dir = "/home/danielb/fall_2021/all_band_plots/%s/"%band_dict["band_folder"]
+        scratch_dir_path = "/datax/scratch/danielb/bl_tess/" + os.path.basename(gcsfuse_mount)
+        # spectrum_path = save_dir + "spectrum/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
+        # waterfall_path= save_dir+ "waterfall/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
+        
+        
+        # generate and save the plots
+        img_list, src_name = bl.stix.make_waterfall_plots(scratch_dir_path, 8, temp_dir, 20, 10, dpi=600)
+
+        # rename generated plots and move them to final folder
+        generated_images = glob.glob(temp_dir + "*png")
+        for path in generated_images:
+            os.system("mv " + path + " " + save_dir + n_flags + "_" + os.path.basename(path))
+        
+        # remove h5 file from scratch folder
+        os.system("rm " + scratch_dir_path)
+        os.system("rm " + temp_dir + "*png")
+
 if __name__ == "__main__":
     # paths to observation histograms
     lband_csv = "/home/danielb/fall_2021/histograms/energy_detection_csvs/L_band_ALL_energy_detection_hist_threshold_4096_with_notch_data.csv"
@@ -195,7 +233,9 @@ if __name__ == "__main__":
 
     save_dir = "/home/danielb/fall_2021/all_band_plots/"
 
-    for ii in range(4):
+    remaining = [2,3]
+
+    for ii in remaining:
         print("Starting", band_dicts[ii]["band_folder"])
         if not os.path.exists(save_dir + band_dicts[ii]["band_folder"]):
             os.mkdir(save_dir + band_dicts[ii]["band_folder"])
@@ -204,4 +244,4 @@ if __name__ == "__main__":
         if not os.path.exists(save_dir + band_dicts[ii]["band_folder"] + "/waterfall"):
             os.mkdir(save_dir + band_dicts[ii]["band_folder"] + "/waterfall")
         
-        plot_band(band_csvs[ii], band_dicts[ii])
+        plot_chunk(band_csvs[ii], band_dicts[ii])

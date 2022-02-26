@@ -211,7 +211,7 @@ def plot_chunk(band_path, band_dict):
         # rename generated plots and move them to final folder
         generated_images = glob.glob(temp_dir + "*png")
         for path in generated_images:
-            os.system("mv " + path + " " + save_dir + n_flags + "_" + os.path.basename(path))
+            os.system("mv " + path + " " + save_dir + str(n_flags) + "_" + os.path.basename(path))
         
         # remove h5 file from scratch folder
         os.system("rm " + scratch_dir_path)

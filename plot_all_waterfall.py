@@ -201,12 +201,21 @@ def plot_chunk(band_path, band_dict):
         # generate filepaths to save spectrum/waterfall
         save_dir = "/home/danielb/fall_2021/all_band_plots/%s/"%band_dict["band_folder"]
         scratch_dir_path = "/datax/scratch/danielb/bl_tess/" + os.path.basename(gcsfuse_mount)
-        # spectrum_path = save_dir + "spectrum/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
+        spectrum_path = save_dir + "spectrum/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
         # waterfall_path= save_dir+ "waterfall/%s_flag_"%n_flags + os.path.basename(gcsfuse_mount) + ".png"
         
         
         # generate and save the plots
-        img_list, src_name = bl.stix.make_waterfall_plots(scratch_dir_path, 8, temp_dir, 20, 10, dpi=600)
+        hf = bl.Waterfall(scratch_dir_path, f_start=band_dict["f_start"], f_stop=band_dict["f_stop"], max_load=band_dict["max_load"])
+
+        plt.figure(figsize=(20,10))
+        hf.plot_spectrum()
+        plt.tight_layout()
+        plt.savefig(spectrum_path, bbox_inches='tight', transparent=False)
+        del hf 
+        gc.collect()
+
+        img_list, src_name = bl.stix.make_waterfall_plots(scratch_dir_path, 8, temp_dir, 20, 10, dpi=150)
 
         # rename generated plots and move them to final folder
         generated_images = glob.glob(temp_dir + "*png")
@@ -215,7 +224,6 @@ def plot_chunk(band_path, band_dict):
         
         # remove h5 file from scratch folder
         os.system("rm " + scratch_dir_path)
-        os.system("rm " + temp_dir + "*png")
 
 if __name__ == "__main__":
     # paths to observation histograms
@@ -233,7 +241,7 @@ if __name__ == "__main__":
 
     save_dir = "/home/danielb/fall_2021/all_band_plots/"
 
-    remaining = [2,3]
+    remaining = [3,2]
 
     for ii in remaining:
         print("Starting", band_dicts[ii]["band_folder"])

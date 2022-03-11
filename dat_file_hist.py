@@ -83,19 +83,20 @@ if __name__ == "__main__":
     else:
         filter_flag = ""
 
+    if args.outdir is not None:
+        outdir = args.outdir+"/"
+    else:
+        outdir = ""
+
     # save histogram plot
     plt.figure(figsize=(20, 10))
     plt.bar(df["frequency"], df["count"], width=1)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
     plt.title("%s Band turboSETI Histogram with n=%s files"%(args.band, len(dat_files)))
-    plt.savefig("%s/%s_band_turboSETI_hist.pdf"%(args.outdir, args.band))
+    plt.savefig("%s%s_band_turboSETI_hist.pdf"%(outdir, args.band))
 
     # save histogram grid DataFrame as a csv
     if args.save:
-        if args.outdir is not None:
-            outdir = args.outdir+"/"
-        else:
-            outdir = ""
         all_histograms_df.to_csv("%s%s_band_ALL_turboSETI_hist_%s.csv"%(outdir, args.band, filter_flag), index=False)
-        df.to_csv("%s%s_band_turboSETI_hist.csv"%(args.outdir, args.band))
+        df.to_csv("%s%s_band_turboSETI_hist.csv"%(outdir, args.band))

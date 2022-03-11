@@ -82,9 +82,6 @@ if __name__ == "__main__":
             filter_flag = ""
     else:
         filter_flag = ""
-    
-    # save total histogram
-    df.to_csv("%s/%s_band_turboSETI_hist.csv"%(args.outdir, args.band))
 
     # save histogram plot
     plt.figure(figsize=(20, 10))
@@ -101,3 +98,4 @@ if __name__ == "__main__":
         else:
             outdir = ""
         all_histograms_df.to_csv("%s%s_band_ALL_turboSETI_hist_%s.csv"%(outdir, args.band, filter_flag), index=False)
+        df.to_csv("%s%s_band_turboSETI_hist.csv"%(args.outdir, args.band))

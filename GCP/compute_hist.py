@@ -238,7 +238,7 @@ if __name__ == "__main__":
     data_dict = {"frequency":edges[:-1], "count":total_hist}
     df = pd.DataFrame(data_dict)
 
-    # remove notch fileter frequencies 
+    # remove notch filter frequencies 
     if args.band=="L":
         if args.notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")

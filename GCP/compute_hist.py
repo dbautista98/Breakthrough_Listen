@@ -221,8 +221,8 @@ if __name__ == "__main__":
                                       check_dropped=args.check_drops, filename=file_name, dropped_df=dropped_df)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":folder_paths[i+1].split("/")[-1]}
-        for i in range(len(total_hist)):
-            temp_dict[bin_edges[i]] = hist[i]
+        for j in range(len(total_hist)):
+            temp_dict[bin_edges[j]] = hist[j]
         temp_df = temp_df.append(temp_dict, ignore_index=True)
         all_histograms_df = all_histograms_df.append(temp_df, ignore_index=True)
         total_hist += hist

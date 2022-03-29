@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="compares energy detection histograms under a range of threshold values to the turboSETI histogram")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="folder where the energy detection csv files are stored")
-    parser.add_argument("turbo_seti", help="path to the turboSETI histogram that it will be compared to")
+    parser.add_argument("turbo_seti", help="path to the turboSETI histogram .csv file that it will be compared to")
     parser.add_argument("-width", "-w", help="width of bin in MHz, default is 1 MHz", default=1)
     parser.add_argument("-outdir", "-o", help="directory to store histograms in", default=None)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when processing the data", action="store_true")
@@ -151,9 +151,13 @@ if __name__ == "__main__":
         print("\tlen(energy detection):  ", len(df["frequency"]))
     turbo_seti_count = turbo_seti["count"].values
 
+    # cut out the energy detection bins that have no data in the dat files
+    dat_mask = np.where(turbo_seti_count > 0)
+    nonzero_df = df.iloc[dat_mask]
+
     # calculate the RMSE
-    ed = np.array(df[threshold_keys]).T
-    ts = turbo_seti_count
+    ed = np.array(nonzero_df[threshold_keys]).T
+    ts = turbo_seti_count[dat_mask]
     all_rmse = RMSE(ts, ed)
     
     # store results

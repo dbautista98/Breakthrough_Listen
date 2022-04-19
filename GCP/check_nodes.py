@@ -110,7 +110,7 @@ def boxcar_analysis(df, nodes, boundaries):
     for i in range(len(boundaries)):
         fch1 = boundaries[i]
         df_subset = select_node(df, fch1)
-        bins = np.linspace(fch1-187.5, fch1, num=1875, endpoint=True)
+        bins = np.linspace(fch1-187.5, fch1, num=1875, endpoint=True) # bin size of 0.1 MHz
         hist, bin_edges = np.histogram(df_subset["frequency"].values, bins=bins)
         if len(df_subset) == 0:
             means[i] = 0
@@ -156,6 +156,10 @@ def format_energy_detection(df, threshold=4096):
     mask = np.where(df["statistic"] >= threshold)
     reduced_df = df.iloc[mask]
     return reduced_df
+
+def format_turbo_seti(df):
+    df.rename(columns={"Freq":"frequency"}, inplace=True)
+    return df
 
 def check_missing(results_df):
     """

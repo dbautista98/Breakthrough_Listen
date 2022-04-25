@@ -399,18 +399,15 @@ def turbo_seti_driver(missing_files_df, data_dir, source_dir):
     bands = ["l", "s", "c", "x"]
 
     for band in bands:
-        print("gathering %s band files..."%(band.upper()), end="")
+        print("gathering %s band files"%(band.upper()))
         source_files = []
         dat_files = glob.glob(data_dir + "/full_%sband/*dat"%band)
         for i in range(len(dat_files)):
-            filename = os.path.basename(dat_files[i]).split(".")[0]
-            source_path = glob.glob(source_dir + "/%s_band/"%band + filename)[0]
-            source_file = os.path.basename(source_path)
-            source_files.append(source_file)
+            filename = os.path.basename(dat_files[i])
+            source_files.append(filename)
         band_string = band*len(dat_files)
         band_list = list(band_string)
 
-        print("Done.")
         missing_files_df = check_many_turbo_seti_files(missing_files_df, dat_files, source_files, band_list)
     
     return missing_files_df

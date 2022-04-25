@@ -81,7 +81,7 @@ def select_node(df, fch1):
     reduced_df = df.iloc[mask]
     return reduced_df
 
-def boxcar_analysis(df, nodes, boundaries):
+def energy_detection_boxcar_analysis(df, nodes, boundaries):
     """
     steps through the frequency intervals corresponding to each 
     compute node and calculates the mean and standard deviation 
@@ -158,10 +158,23 @@ def format_energy_detection(df, threshold=4096):
     return reduced_df
 
 def format_turbo_seti(df):
+    """
+    renames the frequency column to be compatible with previous outputs
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing processed data from an observation
+
+    Returns
+    --------
+    df : pandas.core.frame.DataFrame
+        DataFrame with renames frequency column
+    """
     df.rename(columns={"Freq":"frequency"}, inplace=True)
     return df
 
-def check_missing(results_df):
+def energy_detection_check_missing(results_df):
     """
     uses the file summary data to determine if 
     there were any dropped compute nodes 
@@ -254,8 +267,8 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     nodes, boundaries = node_boundaries(band)
     df = pd.read_csv(csv_path)
     df = format_energy_detection(df, threshold=threshold)
-    results = boxcar_analysis(df, nodes, boundaries)
-    missing_string = check_missing(results)
+    results = energy_detection_boxcar_analysis(df, nodes, boundaries)
+    missing_string = energy_detection_check_missing(results)
     dropped_node_list = identify_missing_node(missing_string, nodes)
     if len(dropped_node_list) == 0:
         # return an empty DataFrame
@@ -265,7 +278,7 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     summary_df = temp_df.append(summary_dict, ignore_index=True)
     return summary_df[["filename", "band", "dropped node bitmap", "dropped node", "algorithm"]]
 
-def check_many_files(missing_files_df, data_list, source_list, band_list, threshold=4096):
+def check_many_energy_detection_files(missing_files_df, data_list, source_list, band_list, threshold=4096):
     """
     loops over many files and each checks for missing nodes
 
@@ -315,7 +328,7 @@ if __name__ == "__main__":
             band_list = list(band_string)
         
         # search the files
-        missing_files_df = check_many_files(missing_files_df, csv_paths, source_files, band_list)
+        missing_files_df = check_many_energy_detection_files(missing_files_df, csv_paths, source_files, band_list)
 
     # save DataFrame
     missing_files_df.to_csv("dropped_nodes.csv")

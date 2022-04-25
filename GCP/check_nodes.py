@@ -364,7 +364,7 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
 
 def check_many_turbo_seti_files(missing_files_df, data_list, source_list, band_list):
     for i in trange(len(data_list)):
-        one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), data_list[i]) # need to add source_list
+        one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), source_list[i]) # need to add source_list
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
     return missing_files_df
 

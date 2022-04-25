@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import trange
 import glob
 import os
+import argparse
 
 def node_boundaries(band, output="default"):
     """
@@ -304,12 +305,10 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
     return missing_files_df
 
-if __name__ == "__main__":
-    missing_files_df = pd.DataFrame()
-    data_dir = "/home/dbautista98/energy-detection/"
-    source_dir = "/home/dbautista98/data/"
+def energy_detection_driver(missing_files_df, data_dir, source_dir):
     csv_name = "all_info_df.csv"
     bands = ["l", "s", "c", "x"]
+
     for band in bands:
         # gather csv files
         print("gathering %s band files"%(band.upper()))
@@ -329,6 +328,26 @@ if __name__ == "__main__":
         
         # search the files
         missing_files_df = check_many_energy_detection_files(missing_files_df, csv_paths, source_files, band_list)
+    
+    return missing_files_df
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="passes over turboSETI or Energy Detection files and identifies files that are affected by compute node dropout, identifiable by a total absense of data in an interval of 187.5 MHz from the start of the channel")
+    parser.add_argument("data_dir", help="directory where the output files (.dat or .csv) are stored")
+    parser.add_argument("source_dir", help="directory where the source .h5 files are stored")
+    parser.add_argument("algorithm", help="algorithm used to generate the files. use either {turboSETI, energy_detection} as input")
+    args = parser.parse_args()
+    
+    
+    missing_files_df = pd.DataFrame()
+    if args.algorithm == "energy_detection":
+        missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, args.source_dir)
+    elif args.algorithm == "turboSETI":
+        pass
+    else:
+        print("ERROR:: please enter an acceptable algorithm input from the following:")
+        print("{turboSETI, energy_detection}")
+        exit()
 
     # save DataFrame
     missing_files_df.to_csv("dropped_nodes.csv")

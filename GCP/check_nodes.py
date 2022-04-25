@@ -403,7 +403,7 @@ def turbo_seti_driver(missing_files_df, data_dir, source_dir):
         source_files = []
         dat_files = glob.glob(data_dir + "/full_%sband/*dat"%band)
         for i in range(len(dat_files)):
-            filename = os.path.basename(dat_files[i])
+            filename = os.path.basename(dat_files[i]).replace("dat", "h5")
             source_files.append(filename)
         band_string = band*len(dat_files)
         band_list = list(band_string)

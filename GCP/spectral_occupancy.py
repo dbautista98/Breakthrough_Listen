@@ -8,6 +8,38 @@ import os
 from tqdm import trange
 import pickle
 
+def band_edges(GBT_band):
+    """
+    Returns the edge frequencies of the Green Bank Telescope
+    bands for {L, S, C, X} bands, as listen in Traas 2021
+
+    Arguments
+    ----------
+    GBT_band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    
+    Returns
+    --------
+    min_freq : float
+        lowest frequency in the bandpass
+    max_freq : float
+        highest frequency in the bandpass
+    """
+    if GBT_band.upper()=="L":
+        min_freq = 1100
+        max_freq = 1900
+    if GBT_band.upper()=="S":
+        min_freq = 1800
+        max_freq = 2800
+    if GBT_band.upper()=="C":  
+        min_freq = 4000
+        max_freq = 7800
+    if GBT_band.upper()=="X":
+        min_freq = 7800
+        max_freq = 11200
+    return min_freq, max_freq
+
 def calculate_hist(csv_file, header_file, GBT_band, bin_width=1, threshold=2048):
     """
     calculates a histogram of the number of hits for a single .dat file
@@ -46,18 +78,7 @@ def calculate_hist(csv_file, header_file, GBT_band, bin_width=1, threshold=2048)
 
     # make the bins of the histogram
     # band boundaries as listed in Traas 2021
-    if GBT_band=="L":
-        min_freq = 1100
-        max_freq = 1900
-    if GBT_band=="S":
-        min_freq = 1800
-        max_freq = 2800
-    if GBT_band=="C":  
-        min_freq = 4000
-        max_freq = 7800
-    if GBT_band=="X":
-        min_freq = 7800
-        max_freq = 11200
+    min_freq, max_freq = band_edges(GBT_band)
     bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq - min_freq)/bin_width), endpoint=True)
     hist, bin_edges = np.histogram(tbl["freqs"], bins=bins)
     del tbl

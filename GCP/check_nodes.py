@@ -4,6 +4,11 @@ from tqdm import trange
 import glob
 import os
 import argparse
+try:
+    import spectral_occupancy as so
+except:
+    from . import spectral_occupancy as so
+import turbo_seti.find_event as fe
 
 def node_boundaries(band, output="default"):
     """
@@ -82,6 +87,10 @@ def select_node(df, fch1):
     reduced_df = df.iloc[mask]
     return reduced_df
 
+def check_possible_data(df, fch1, band_edges):
+    in_range = (fch1 < np.max(band_edges)) and ((fch1) > np.min(band_edges))
+    return in_range
+
 def energy_detection_boxcar_analysis(df, nodes, boundaries):
     """
     steps through the frequency intervals corresponding to each 
@@ -133,7 +142,24 @@ def energy_detection_boxcar_analysis(df, nodes, boundaries):
         data_dict = {"nodes":nodes, "fch1":boundaries, "data present":data_present, "mean statistic":means, "standard deviation":st_devs}
         result_df = pd.DataFrame(data_dict)
 
-    return result_df#means, st_devs
+    return result_df
+
+def turbo_seti_boxcar_analysis(df, nodes, boundaries, band):
+    data_present = np.empty_like(boundaries, dtype=bool)
+    band_edges = np.array(so.band_edges(band))
+    
+    for i in range(len(boundaries)):
+        fch1 = boundaries[i]
+        df_subset = select_node(df, fch1)
+        possible_data = check_possible_data(df_subset, fch1, band_edges)
+        if not possible_data:
+            data_present[i] = True
+        else:
+            data_present[i] = (len(df_subset) != 0)
+        
+    data_dict = {"nodes":nodes, "fch1":boundaries, "data present":data_present}
+    result_df = pd.DataFrame(data_dict)
+    return result_df
 
 def format_energy_detection(df, threshold=4096):
     """
@@ -202,6 +228,22 @@ def energy_detection_check_missing(results_df):
         else:
             node_drops.append(1)
     
+    # convert bitmap to string
+    string_nodes = [str(int) for int in node_drops]
+    bitmap_string = "".join(string_nodes)
+    return bitmap_string
+
+def turbo_seti_check_missing(results_df):
+    nodes = results_df["nodes"].values
+    has_data = results_df["data present"].values
+    node_drops = []
+    
+    for i in range(len(nodes)):
+        if has_data[i]:
+            node_drops.append(1)
+        else:
+            node_drops.append(0)
+            
     # convert bitmap to string
     string_nodes = [str(int) for int in node_drops]
     bitmap_string = "".join(string_nodes)
@@ -279,6 +321,21 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     summary_df = temp_df.append(summary_dict, ignore_index=True)
     return summary_df[["filename", "band", "dropped node bitmap", "dropped node", "algorithm"]]
 
+def turbo_seti_file_summary(dat_path, band, source_file_name, threshold=4096):
+    nodes, boundaries = node_boundaries(band)
+    df = fe.read_dat(dat_path)
+    df = format_turbo_seti(df)
+    results = turbo_seti_boxcar_analysis(df, nodes, boundaries, band) # problem
+    missing_string = turbo_seti_check_missing(results)
+    dropped_node_list = identify_missing_node(missing_string, nodes)
+    if len(dropped_node_list) == 0:
+        # return an empty DataFrame
+        return pd.DataFrame()
+    summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "dropped node":(" ".join(dropped_node_list)), "algorithm":"turbo_seti"}
+    temp_df = pd.DataFrame()
+    summary_df = temp_df.append(summary_dict, ignore_index=True)
+    return summary_df[["filename", "band", "dropped node bitmap", "dropped node", "algorithm"]]
+
 def check_many_energy_detection_files(missing_files_df, data_list, source_list, band_list, threshold=4096):
     """
     loops over many files and each checks for missing nodes
@@ -305,13 +362,19 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
     return missing_files_df
 
-def energy_detection_driver(missing_files_df, data_dir, source_dir):
+def check_many_turbo_seti_files(missing_files_df, data_list, source_list, band_list):
+    for i in trange(len(data_list)):
+        one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), data_list[i]) # need to add source_list
+        missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
+    return missing_files_df
+
+def energy_detection_driver(missing_files_df, data_dir, source_dir, threshold=4096):
     csv_name = "all_info_df.csv"
     bands = ["l", "s", "c", "x"]
 
     for band in bands:
         # gather csv files
-        print("gathering %s band files"%(band.upper()))
+        print("gathering %s band files..."%(band.upper()), end="")
         source_files = []
         csv_paths = glob.glob(data_dir + "%s-band/*"%band)
         for i in range(len(csv_paths)):
@@ -323,11 +386,32 @@ def energy_detection_driver(missing_files_df, data_dir, source_dir):
             source_file = os.path.basename(source_path)
             source_files.append(source_file)
             csv_paths[i] = csv_paths[i] + "/" + csv_name
-            band_string = band*(len(csv_paths))
-            band_list = list(band_string)
+        band_string = band*(len(csv_paths))
+        band_list = list(band_string)
         
+        print("Done.")
         # search the files
-        missing_files_df = check_many_energy_detection_files(missing_files_df, csv_paths, source_files, band_list)
+        missing_files_df = check_many_energy_detection_files(missing_files_df, csv_paths, source_files, band_list, threshold=threshold)
+    
+    return missing_files_df
+
+def turbo_seti_driver(missing_files_df, data_dir, source_dir):
+    bands = ["l", "s", "c", "x"]
+
+    for band in bands:
+        print("gathering %s band files..."%(band.upper()), end="")
+        source_files = []
+        dat_files = glob.glob(data_dir + "/full_%sband/*dat"%band)
+        for i in range(len(dat_files)):
+            filename = os.path.basename(dat_files[i]).split(".")[0]
+            source_path = glob.glob(source_dir + "/%s_band/"%band + filename)[0]
+            source_file = os.path.basename(source_path)
+            source_files.append(source_file)
+        band_string = band*len(dat_files)
+        band_list = list(band_string)
+
+        print("Done.")
+        missing_files_df = check_many_turbo_seti_files(missing_files_df, dat_files, source_files, band_list)
     
     return missing_files_df
 
@@ -336,14 +420,15 @@ if __name__ == "__main__":
     parser.add_argument("data_dir", help="directory where the output files (.dat or .csv) are stored")
     parser.add_argument("source_dir", help="directory where the source .h5 files are stored")
     parser.add_argument("algorithm", help="algorithm used to generate the files. use either {turboSETI, energy_detection} as input")
+    parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     args = parser.parse_args()
     
     
     missing_files_df = pd.DataFrame()
     if args.algorithm == "energy_detection":
-        missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, args.source_dir)
+        missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, args.source_dir, threshold=args.threshold)
     elif args.algorithm == "turboSETI":
-        pass
+        missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir, args.source_dir)
     else:
         print("ERROR:: please enter an acceptable algorithm input from the following:")
         print("{turboSETI, energy_detection}")

@@ -276,6 +276,12 @@ def identify_missing_node(bitmap, nodes):
     mask = (bit_list == "0")
     return list(np.array(nodes)[mask])
 
+def get_target_name(filename):
+    base_name = filename.split("/")
+    file_name = base_name[-1]
+    target_name = file_name.split("_")
+    return target_name[-2]
+
 def energy_detection_file_summary(csv_path, band, source_file_name, threshold=4096):
     """
     Determines if an energy detection file is missing any 
@@ -320,6 +326,9 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     if len(dropped_node_list) == 0:
         # return an empty DataFrame
         return pd.DataFrame()
+    # target_names = []
+    # for target in source_file_name:
+    #     target_names.append(get_target_name(target))
     summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "dropped node":(" ".join(dropped_node_list)), "algorithm":"energy detection"}
     temp_df = pd.DataFrame()
     summary_df = temp_df.append(summary_dict, ignore_index=True)
@@ -335,6 +344,9 @@ def turbo_seti_file_summary(dat_path, band, source_file_name, threshold=4096):
     if len(dropped_node_list) == 0:
         # return an empty DataFrame
         return pd.DataFrame()
+    # target_names = []
+    # for target in source_file_name:
+    #     target_names.append(get_target_name(target))
     summary_dict = {"filename":source_file_name, "band":band.upper(), "dropped node bitmap":missing_string, "dropped node":(" ".join(dropped_node_list)), "algorithm":"turbo_seti"}
     temp_df = pd.DataFrame()
     summary_df = temp_df.append(summary_dict, ignore_index=True)
@@ -368,7 +380,7 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
 
 def check_many_turbo_seti_files(missing_files_df, data_list, source_list, band_list):
     for i in trange(len(data_list)):
-        one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), source_list[i]) # need to add source_list
+        one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), source_list[i])
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
     return missing_files_df
 
@@ -402,7 +414,7 @@ def turbo_seti_driver(missing_files_df, data_dir):
         source_files = []
         dat_files = glob.glob(data_dir + "/full_%sband/*dat"%band)
         for i in range(len(dat_files)):
-            filename = os.path.basename(dat_files[i]).replace("dat", "h5")
+            filename = os.path.basename(dat_files[i]).replace("datnew.dat", "dat").replace("dat", "h5")
             source_files.append(filename)
         band_string = band*len(dat_files)
         band_list = list(band_string)
@@ -457,6 +469,12 @@ def flag_z(df, min_z, region="upper"):
     else:
         mask = np.where(z_tbl < min_z)
     stacked = np.vstack(mask)
+    max_z = np.max(z_tbl, axis=1)
+    max_z_frequencies = []
+    frequencies = df.columns
+    for i in range(len(df)):
+        max_z_index = np.where(z_tbl[i] == max_z[i])
+        max_z_frequencies.append(frequencies[max_z_index])
     file_indx = np.unique(stacked[0])
     flagged_freqs = []
     for indx in file_indx:
@@ -464,7 +482,9 @@ def flag_z(df, min_z, region="upper"):
         frequencies = np.array(df.T.iloc[this_file].index)
         flagged_freqs.append(frequencies)
     flagged_files = df.iloc[file_indx].index
-    return flagged_files, flagged_freqs
+    flagged_max_z = max_z[file_indx]
+    flagged_max_z_frequency = np.array(max_z_frequencies, dtype=object)[file_indx]
+    return flagged_files, flagged_freqs, flagged_max_z, flagged_max_z_frequency
 
 def gaussian(x, A, mu, sigma):
     return A*np.exp(-0.5 * (x-mu)**2 / sigma**2)
@@ -481,20 +501,29 @@ def percent_above_threshold(threshold, x_data, y_data):
     mask = np.where((x_data[:-1] > threshold) & (y_data > 0))
     return np.sum(y_data[mask])/np.sum(y_data)
 
-def identify_flagged_files(threshold, filenames, freqs, band):
+def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, band):
     if type(filenames) == pandas.core.indexes.base.Index:
         filenames = filenames.values
     n_flags = np.empty(len(freqs))
     for i in range(len(freqs)):
         n_flags[i] = len(freqs[i])
-        temp = filenames[i].replace(".datnew.dat", ".h5")
+        temp = filenames[i].replace("datnew.dat", "dat")
+        temp = temp.replace("dat", "h5")
         filenames[i] = temp
     
-    mask = n_flags > threshold
+    mask = (n_flags > threshold)
     out_files = filenames[mask]
     out_flags = n_flags[mask]
+    out_z_scores = max_z[mask]
+    out_z_frequency = max_z_frequency[mask]
+    for i in range(len(out_z_frequency)):
+        out_z_frequency[i] = " ".join(list(out_z_frequency[i]))
+
+    # target_names = []
+    # for target in out_files:
+    #     target_names.append(get_target_name(target))
     
-    data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask]}
+    data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask], "max z score":out_z_scores, "max z frequency":out_z_frequency}
     return pd.DataFrame(data_dict)
 
 def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
@@ -509,7 +538,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     mask = np.where((freqs >=1200) & (freqs<= 1341))
     band_data = band.to_numpy()
     band_data[:, mask] = 0
-    a, b = flag_z(band, sigma_threshold)
+    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
     for entry in b:
         flag_counts.append(len(entry))
@@ -520,7 +549,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     axs[0,0].vlines(critical_x, 0, popt[0], color="red")
     plot_x = np.linspace(0, np.max(x), 1000)
     flag_fraction = percent_above_threshold(critical_x, x, y)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, "L"), ignore_index=True)
+    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "L"), ignore_index=True)
     axs[0,0].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
     axs[0,0].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
     axs[0,0].legend()
@@ -535,7 +564,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     mask = np.where((freqs >= 2300) & (freqs <= 2360))
     band_data = band.to_numpy()
     band_data[:, mask] = 0
-    a, b = flag_z(band, sigma_threshold)
+    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
     for entry in b:
         flag_counts.append(len(entry))
@@ -547,7 +576,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
     axs[0,1].vlines(critical_x, 0, popt[0], color="red")
     flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, "S"), ignore_index=True)
+    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "S"), ignore_index=True)
     axs[0,1].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
     plot_x = np.linspace(np.min(hx), np.max(hx), 1000)
     axs[0,1].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
@@ -559,7 +588,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
 
     # C band
     band = pd.read_csv(all_hist_csvs[0], index_col="filename")
-    a, b = flag_z(band, sigma_threshold)
+    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
     for entry in b:
         flag_counts.append(len(entry))
@@ -571,7 +600,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
     axs[1,0].vlines(critical_x, 0, popt[0], color="red")
     flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, "C"), ignore_index=True)
+    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "C"), ignore_index=True)
     axs[1,0].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
     plot_x = np.linspace(np.min(hx), np.max(hx), 1000)
     axs[1,0].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
@@ -583,7 +612,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
 
     # X band
     band = pd.read_csv(all_hist_csvs[3], index_col="filename")
-    a, b = flag_z(band, sigma_threshold)
+    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
     for entry in b:
         flag_counts.append(len(entry))
@@ -596,7 +625,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
     critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
     axs[1,1].vlines(critical_x, 0, popt[0], color="red")
     flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, "X"), ignore_index=True)
+    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "X"), ignore_index=True)
     axs[1,1].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
     axs[1,1].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%(popt[-1]))
     axs[1,1].legend()
@@ -623,7 +652,7 @@ if __name__ == "__main__":
     if args.algorithm == "energy_detection":
         missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, threshold=args.threshold)
     elif args.algorithm == "turboSETI":
-        missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
+        # missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
         RFI_df = RFI_check(all_hist_csvs, out_dir=args.outdir)
         RFI_df.to_csv(args.outdir + "bad_RFI.csv", index=False)
     else:
@@ -631,4 +660,4 @@ if __name__ == "__main__":
         print("{turboSETI, energy_detection}")
         exit()
 
-    missing_files_df.to_csv(args.outdir + "dropped_nodes.csv", index=False)
+    # missing_files_df.to_csv(args.outdir + "dropped_nodes.csv", index=False)

@@ -652,7 +652,7 @@ if __name__ == "__main__":
     if args.algorithm == "energy_detection":
         missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, threshold=args.threshold)
     elif args.algorithm == "turboSETI":
-        # missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
+        missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
         RFI_df = RFI_check(all_hist_csvs, out_dir=args.outdir)
         RFI_df.to_csv(args.outdir + "bad_RFI.csv", index=False)
     else:
@@ -660,4 +660,4 @@ if __name__ == "__main__":
         print("{turboSETI, energy_detection}")
         exit()
 
-    # missing_files_df.to_csv(args.outdir + "dropped_nodes.csv", index=False)
+    missing_files_df.to_csv(args.outdir + "dropped_nodes.csv", index=False)

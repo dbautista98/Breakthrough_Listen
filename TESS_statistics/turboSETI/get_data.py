@@ -7,7 +7,7 @@ def get_data():
     csvs = glob.glob(current_dir + "*csv")
     csvs.sort()
 
-    L = pd.read_csv(csvs[1])
+    L = pd.read_csv(csvs[1], index_col="filename")
     S = pd.read_csv(csvs[2])
     C = pd.read_csv(csvs[0])
     X = pd.read_csv(csvs[3])

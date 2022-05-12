@@ -1,4 +1,3 @@
-from re import I
 import pandas as pd
 import pandas
 import numpy as np
@@ -7,10 +6,7 @@ from tqdm import trange
 import glob
 import os
 import argparse
-try:
-    import spectral_occupancy as so
-except:
-    from . import spectral_occupancy as so
+import GCP.spectral_occupancy as so
 import turbo_seti.find_event as fe
 from scipy.optimize import curve_fit
 

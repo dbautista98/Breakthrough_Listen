@@ -8,9 +8,13 @@ import glob
 import os
 import argparse
 try:
-    import GCP.spectral_occupancy as so
+    import spectral_occupancy as so
 except:
     from . import spectral_occupancy as so
+try:
+    import remove_DC_spike as dc
+except:
+    from . import remove_DC_spike as dc
 import turbo_seti.find_event as fe
 from scipy.optimize import curve_fit
 
@@ -337,6 +341,7 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
 def turbo_seti_file_summary(dat_path, band, source_file_name, threshold=4096):
     nodes, boundaries = node_boundaries(band)
     df = fe.read_dat(dat_path)
+    # df = remove_DC_spikes(df)
     df = format_turbo_seti(df)
     results = turbo_seti_boxcar_analysis(df, nodes, boundaries, band) # problem
     missing_string = turbo_seti_check_missing(results)
@@ -406,20 +411,17 @@ def energy_detection_driver(missing_files_df, data_dir, threshold=4096):
     
     return missing_files_df
 
-def turbo_seti_driver(missing_files_df, data_dir):
-    bands = ["l", "s", "c", "x"]
+def turbo_seti_driver(missing_files_df, data_dir, band):
+    print("gathering %s band files"%(band.upper()))
+    source_files = []
+    dat_files = glob.glob(data_dir + "/*dat")
+    for i in range(len(dat_files)):
+        filename = os.path.basename(dat_files[i]).replace("datnew.dat", "dat").replace("dat", "h5")
+        source_files.append(filename)
+    band_string = band*len(dat_files)
+    band_list = list(band_string)
 
-    for band in bands:
-        print("gathering %s band files"%(band.upper()))
-        source_files = []
-        dat_files = glob.glob(data_dir + "/full_%sband/*dat"%band)
-        for i in range(len(dat_files)):
-            filename = os.path.basename(dat_files[i]).replace("datnew.dat", "dat").replace("dat", "h5")
-            source_files.append(filename)
-        band_string = band*len(dat_files)
-        band_list = list(band_string)
-
-        missing_files_df = check_many_turbo_seti_files(missing_files_df, dat_files, source_files, band_list)
+    missing_files_df = check_many_turbo_seti_files(missing_files_df, dat_files, source_files, band_list)
     
     return missing_files_df
 
@@ -436,9 +438,23 @@ def z_score(test_df, historical_df):
     
     return z_tbl
 
+def remove_DC_spikes(dat_file, GBT_band):
+    fch1, foff, nfpc, num_course_channels = dc.grab_parameters(dat_file, GBT_band)
+    spike_channels_list = dc.spike_channels(num_course_channels, nfpc)
+    freqs_fine_channels_list = dc.freqs_fine_channels(spike_channels_list, fch1, foff)
+
+    freqs = dat_file["Freq"]
+    keep_mask = np.in1d(freqs, freqs_fine_channels_list, invert=True)
+    return dat_file[keep_mask]
+
 def list_to_df(test_data_lst, band):
     df = pd.DataFrame()
     file_name = os.path.basename(test_data_lst[0])
+
+    # TEMPORARY
+    # test_data_lst[0] = remove_DC_spikes(fe.read_dat(test_data_lst[0]), band)
+    # end temporary code
+
     hist, bin_edges = so.calculate_hist(test_data_lst[0], band, bin_width=1)
     temp_dict = {"filename":file_name}
     for i in range(len(hist)):
@@ -446,7 +462,10 @@ def list_to_df(test_data_lst, band):
     df = df.append(temp_dict, ignore_index=True)
     
     for i in range(len(test_data_lst)-1):
-        file_name = os.path.basename(test_data_lst[i])
+        file_name = os.path.basename(test_data_lst[i+1])
+        # TEMPORARY
+        # test_data_lst[i+1] = remove_DC_spikes(fe.read_dat(test_data_lst[i+1]), band)
+        # end temporary code
         hist, edges = so.calculate_hist(test_data_lst[i+1], band, bin_width=1)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":file_name}
@@ -540,7 +559,8 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     out_z_scores = max_z[mask]
     out_z_frequency = max_z_frequency[mask]
     for i in range(len(out_z_frequency)):
-        out_z_frequency[i] = " ".join(list(out_z_frequency[i]))
+        # as_list = np.array(out_z_frequency[i], dtype=object).tolist()
+        out_z_frequency[i] = ' '.join(str(v) for v in out_z_frequency[i]) #" ".join(as_list)
 
     # target_names = []
     # for target in out_files:
@@ -549,7 +569,7 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask], "max z score":out_z_scores, "max z frequency":out_z_frequency}
     return pd.DataFrame(data_dict)
 
-def RFI_check(all_hist_csvs, data_dir, out_dir, sigma_threshold=2, bad_file_threshold=5, algorithm="turboSETI"):
+def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=5, algorithm="turboSETI"):
     percent = "%"
 
     if algorithm == "turboSETI":
@@ -563,139 +583,93 @@ def RFI_check(all_hist_csvs, data_dir, out_dir, sigma_threshold=2, bad_file_thre
         print("{turboSETI, energy_detection}")
         exit()
 
-    fig, axs = plt.subplots(2, 2, figsize=(10,10))
+    # TEMPORARY::
+    dat_list = glob.glob(test_df+"/*dat")
+    test_df = list_to_df(dat_list, GBT_band)
+    # end temporary
+
+    plt.figure(figsize=(6,6))
     bad_file_df = pd.DataFrame()
 
-    # L band
-    historical_L = historical_data["L"]
-    band = pd.read_csv(all_hist_csvs[1], index_col="filename")
-    freqs = np.arange(1100, 1901)
-    mask = np.where((freqs >=1200) & (freqs<= 1341))
-    band_data = band.to_numpy()
+    # read in long-term data
+    historical_df = historical_data[GBT_band]
+    min_f, max_f = so.band_edges(GBT_band)
+    freqs = np.arange(min_f, max_f)
+
+    # exclude bandpass data for L,S band sources
+    if GBT_band == "L":
+        mask = np.where((freqs >=1200) & (freqs<= 1341))
+    elif GBT_band == "S":
+        mask = np.where((freqs >= 2300) & (freqs <= 2360))
+    else:
+        mask = np.where((freqs >= max_f) & (freqs <= min_f))
+    band_data = test_df.to_numpy()
+    historical = historical_df.to_numpy()
     band_data[:, mask] = 0
-    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
+    historical[:, mask] = 0
+
+    # identify files with high z-scores
+    a, b, max_z, max_z_frequency = flag_z(test_df, historical_df, sigma_threshold)
     flag_counts = []
     for entry in b:
         flag_counts.append(len(entry))
 
-    y,x,_ = axs[0,0].hist(flag_counts, bins=50)
-    popt, pcov = curve_fit(gaussian,x[:-1],y)#, p0=(3, 200))
-    critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, x, y)
-    axs[0,0].vlines(critical_x, 0, popt[0], color="red")
+    # set cutoff based on long-term statistics
+    hist_files, hist_freqs, hist_max_z, hist_max_z_frequency = flag_z(historical_df, historical_df, sigma_threshold)
+    hist_counts = []
+    for entry in hist_freqs:
+        hist_counts.append(len(entry))
+    hy, hx = np.histogram(hist_counts, bins=50)
+    popt, pcov = curve_fit(gaussian,hx[:-1],hy)#, p0=(3, 200))
+    critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
+
+    # rescale amplitude of gaussian
+    popt[0] = popt[0]/len(historical_df)*len(test_df)
+
+    # make histogram of test data
+    y,x,_ = plt.hist(flag_counts, bins=50)
+    plt.vlines(critical_x, 0, popt[0], color="red")
     plot_x = np.linspace(0, np.max(x), 1000)
     flag_fraction = percent_above_threshold(critical_x, x, y)
     bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "L"), ignore_index=True)
-    axs[0,0].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
-    axs[0,0].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
-    axs[0,0].legend()
-    axs[0,0].set_title("L band channels above %s$\sigma$"%sigma_threshold)
-    axs[0,0].set_xlabel("Number of channels flagged")
-    axs[0,0].set_ylabel("count")
+    plt.scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
+    plt.plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
+    plt.legend()
+    plt.title("L band channels above %s$\sigma$"%sigma_threshold)
+    plt.xlabel("Number of channels flagged")
+    plt.ylabel("count")
 
-
-    # S band
-    historical_S = historical_data["S"]
-    band = pd.read_csv(all_hist_csvs[2], index_col="filename")
-    freqs = np.arange(1800, 2801)
-    mask = np.where((freqs >= 2300) & (freqs <= 2360))
-    band_data = band.to_numpy()
-    band_data[:, mask] = 0
-    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
-    flag_counts = []
-    for entry in b:
-        flag_counts.append(len(entry))
-
-    bins = np.arange(0,41, 2)
-    y,x = np.histogram(flag_counts, bins=bins)
-    hy, hx,_ = axs[0,1].hist(flag_counts, bins=50)
-    popt, pcov = curve_fit(gaussian,x[:-1],y)#, p0=(25, 3, 10))
-    critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
-    axs[0,1].vlines(critical_x, 0, popt[0], color="red")
-    flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "S"), ignore_index=True)
-    axs[0,1].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
-    plot_x = np.linspace(np.min(hx), np.max(hx), 1000)
-    axs[0,1].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
-    axs[0,1].legend()
-    axs[0,1].set_title("S band channels above %s$\sigma$"%sigma_threshold)
-    axs[0,1].set_xlabel("Number of channels flagged")
-    axs[0,1].set_ylabel("count")
-
-
-    # C band
-    historical_C = historical_data["C"]
-    band = pd.read_csv(all_hist_csvs[0], index_col="filename")
-    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
-    flag_counts = []
-    for entry in b:
-        flag_counts.append(len(entry))
-        
-    bins = np.arange(0, 151, 3)
-    y,x = np.histogram(flag_counts, bins=bins)
-    hy,hx,_ = axs[1,0].hist(flag_counts, bins=50)
-    popt, pcov = curve_fit(gaussian,x[:-1],y)#, p0=(50, 25, 25))
-    critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
-    axs[1,0].vlines(critical_x, 0, popt[0], color="red")
-    flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "C"), ignore_index=True)
-    axs[1,0].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
-    plot_x = np.linspace(np.min(hx), np.max(hx), 1000)
-    axs[1,0].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
-    axs[1,0].legend()
-    axs[1,0].set_title("C band channels above %s$\sigma$"%sigma_threshold)
-    axs[1,0].set_xlabel("Number of channels flagged")
-    axs[1,0].set_ylabel("count")
-
-
-    # X band
-    historical_X = historical_data["X"]
-    band = pd.read_csv(all_hist_csvs[3], index_col="filename")
-    a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
-    flag_counts = []
-    for entry in b:
-        flag_counts.append(len(entry))
-        
-    bins = np.arange(0,151, 7)
-    y,x = np.histogram(flag_counts, bins=bins)
-    hy,hx,_ = axs[1,1].hist(flag_counts, bins=50)
-    popt, pcov = curve_fit(gaussian,x[:-1],y, p0=(50,-20, 20))
-    plot_x = np.linspace(0, np.max(hx), 1000)
-    critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
-    axs[1,1].vlines(critical_x, 0, popt[0], color="red")
-    flag_fraction = percent_above_threshold(critical_x, hx, hy)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "X"), ignore_index=True)
-    axs[1,1].scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
-    axs[1,1].plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%(popt[-1]))
-    axs[1,1].legend()
-    axs[1,1].set_title("X band channels above %s$\sigma$"%sigma_threshold)
-    axs[1,1].set_xlabel("Number of channels flagged")
-    axs[1,1].set_ylabel("count")
-    plt.savefig(out_dir + "flag_count_grid.pdf", bbox_inches="tight", transparent=False)
+    plt.savefig(out_dir + "%s_band_flag_count_grid.pdf"%GBT_band, bbox_inches="tight", transparent=False)
 
     return bad_file_df
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="passes over turboSETI or Energy Detection files and identifies files that are affected by compute node dropout, identifiable by a total absense of data in an interval of 187.5 MHz from the start of the channel")
+    parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("data_dir", help="directory where the output files (.dat or .csv) are stored")
     parser.add_argument("algorithm", help="algorithm used to generate the files. use either {turboSETI, energy_detection} as input")
-    parser.add_argument("histogram_dir", help="directory where the turboSETI histogram (.csv) are stored. run PROGRAM NAME HERE to generate") # update to work with the energy detection histograms
-    parser.add_argument("-threshold", "-t", help="threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
+    # parser.add_argument("histogram_dir", help="directory where the turboSETI histogram (.csv) are stored. run PROGRAM NAME HERE to generate") # update to work with the energy detection histograms
+    parser.add_argument("-threshold", "-t", help="Note: for energy detection files only! The threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     parser.add_argument("-outdir", "-o", help="directory where the results are saved", default="")
     args = parser.parse_args()
 
-    all_hist_csvs = glob.glob(args.histogram_dir + "/*ALL*csv")
-    all_hist_csvs.sort()
+    # fix potential pathing error
+    if args.outdir != "":
+        args.outdir = args.outdir + "/"
+
+    # all_hist_csvs = glob.glob(args.histogram_dir + "/*ALL*csv")
+    # all_hist_csvs.sort()
     missing_files_df = pd.DataFrame()
 
     if args.algorithm == "energy_detection":
         missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, threshold=args.threshold)
     elif args.algorithm == "turboSETI":
-        missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
-        RFI_df = RFI_check(all_hist_csvs, args.data_dir, out_dir=args.outdir, algorithm=args.algorithm)
-        RFI_df.to_csv(args.outdir + "bad_RFI.csv", index=False)
+        missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir, args.band)
+        RFI_df = RFI_check(test_df=args.data_dir, out_dir=args.outdir, GBT_band=args.band, algorithm=args.algorithm)#RFI_check(args.data_dir, out_dir=args.outdir, algorithm=args.algorithm)
+        RFI_df.to_csv(args.outdir + "%s_band_bad_RFI.csv"%args.band, index=False)
     else:
         print("ERROR:: please enter an acceptable algorithm input from the following:")
         print("{turboSETI, energy_detection}")
         exit()
 
-    missing_files_df.to_csv(args.outdir + "dropped_nodes.csv", index=False)
+    missing_files_df.to_csv(args.outdir + "%s_band_dropped_nodes.csv"%args.band, index=False)

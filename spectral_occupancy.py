@@ -133,8 +133,10 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         the edge values of each bin. Has length Nbins+1
     """
     #read the file into a pandas dataframe
-    if type(tbl) != pandas.core.frame.DataFrame:
+    if type(dat_file) != pandas.core.frame.DataFrame:
         tbl = find.read_dat(dat_file)
+    else:
+        tbl = dat_file
 
     #make the bins for the histogram
     # band boundaries as listed in Traas 2021

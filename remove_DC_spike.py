@@ -5,6 +5,7 @@ to remove the DC spikes from a .dat file.
 
 import numpy as np
 import pandas as pd
+import pandas
 import glob
 import argparse
 import time
@@ -28,8 +29,10 @@ def grab_parameters(dat_file, GBT_band):
     Returns : fch1, foff, nfpc
     which will be used internally within remove_DC_spike
     """
-    
-    tbl = find.read_dat(dat_file)
+    if type(dat_file) != pandas.core.frame.DataFrame:
+        tbl = find.read_dat(dat_file)
+    else:
+        tbl = dat_file
     
     if GBT_band == "L":
         fch1 = 1926.2695326677515 # LBAND  --  this is hardcoded, it would be nice to fix that

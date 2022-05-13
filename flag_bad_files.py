@@ -1,3 +1,4 @@
+from importlib.util import spec_from_file_location
 import pandas as pd
 import pandas
 import numpy as np
@@ -6,7 +7,10 @@ from tqdm import trange
 import glob
 import os
 import argparse
-import GCP.spectral_occupancy as so
+try:
+    import GCP.spectral_occupancy as so
+except:
+    from . import spectral_occupancy as so
 import turbo_seti.find_event as fe
 from scipy.optimize import curve_fit
 
@@ -419,34 +423,55 @@ def turbo_seti_driver(missing_files_df, data_dir):
     
     return missing_files_df
 
-def z_score(df):
-    arr = np.array(df)
-    mean = np.mean(arr, axis=0)
-    sd = np.std(arr, axis=0)
-    no_data = np.where(np.sum(arr, axis=0) == 0)
-    # correct for zero standard deviations
+def z_score(test_df, historical_df):
+    x = np.array(test_df)
+    historical = np.array(historical_df)
+    mean = np.mean(historical, axis=0)
+    sd = np.std(historical, axis=0)
+    no_data = np.where(np.sum(historical, axis=0) == 0)
     sd[no_data] = np.inf
-    mask = np.where(sd==0)
+    mask = np.where(sd == 0)
     sd[mask] = 1e-9
-    z_tbl = (arr - mean)/sd
+    z_tbl = (x - mean)/ sd
     
     return z_tbl
 
-def flag_z(df, min_z, region="upper"):
+def list_to_df(test_data_lst, band):
+    df = pd.DataFrame()
+    file_name = os.path.basename(test_data_lst[0])
+    hist, bin_edges = so.calculate_hist(test_data_lst[0], band, bin_width=1)
+    temp_dict = {"filename":file_name}
+    for i in range(len(hist)):
+        temp_dict[bin_edges[i]] = hist[i]
+    df = df.append(temp_dict, ignore_index=True)
+    
+    for i in range(len(test_data_lst)-1):
+        file_name = os.path.basename(test_data_lst[i])
+        hist, edges = so.calculate_hist(test_data_lst[i+1], band, bin_width=1)
+        temp_df = pd.DataFrame()
+        temp_dict = {"filename":file_name}
+        for j in range(len(hist)):
+            temp_dict[bin_edges[j]] = hist[j]
+        temp_df = temp_df.append(temp_dict, ignore_index=True)
+        df = df.append(temp_df, ignore_index=True)
+    
+    df = df.set_index("filename")
+    
+    return df
+
+def flag_z(test_df, historical_df, min_z):
     """
     Takes a DataFrame and minimum Z-score and returns 
     all the files with channels above this Z-score
     as well as the corresponding frequencies
     
-    Will output two lists of the same length. The 
-    first file will hold the filenames and the second 
-    will hold the frequencies in that file that are 
-    above the Z-score
-    
     Arguments:
     -----------
-    df : pandas.core.frame.DataFrame
-        DataFrame containing the fine channel fraction data
+    test_df : pandas.core.frame.DataFrame
+        DataFrame containing the detected event data
+    historical_df : pandas.core.frame.DataFrame
+        DataFrame containing historical data calculated from 
+        long-term TESS targets observed at GBT
     min_z : float
         the minimum allowed Z-score, above which files will
         be flagged
@@ -458,26 +483,28 @@ def flag_z(df, min_z, region="upper"):
         of the flagged files
     flagged_freqs : list
         A list of frequencies that were flagged 
+    flagged_max_z : numpy.ndarray
+        Array of the higest z-score for a given file
+    flagged_max_z_frequency : type(max_z_frequency)
+        Array of the frequency(s) corresponding to the 
+        highest z-score in a given file
     """
-    z_tbl = z_score(df)
-    if region=="upper":
-        mask = np.where(z_tbl > min_z)
-    else:
-        mask = np.where(z_tbl < min_z)
+    z_tbl = z_score(test_df, historical_df)
+    mask = np.where(z_tbl > min_z)
     stacked = np.vstack(mask)
     max_z = np.max(z_tbl, axis=1)
     max_z_frequencies = []
-    frequencies = df.columns
-    for i in range(len(df)):
+    frequencies = test_df.columns
+    for i in range(len(test_df)):
         max_z_index = np.where(z_tbl[i] == max_z[i])
         max_z_frequencies.append(frequencies[max_z_index])
     file_indx = np.unique(stacked[0])
     flagged_freqs = []
     for indx in file_indx:
         this_file = stacked[1][np.where(stacked[0] == indx)[0]]
-        frequencies = np.array(df.T.iloc[this_file].index)
+        frequencies = np.array(test_df.T.iloc[this_file].index)
         flagged_freqs.append(frequencies)
-    flagged_files = df.iloc[file_indx].index
+    flagged_files = test_df.iloc[file_indx].index
     flagged_max_z = max_z[file_indx]
     flagged_max_z_frequency = np.array(max_z_frequencies, dtype=object)[file_indx]
     return flagged_files, flagged_freqs, flagged_max_z, flagged_max_z_frequency
@@ -522,13 +549,25 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask], "max z score":out_z_scores, "max z frequency":out_z_frequency}
     return pd.DataFrame(data_dict)
 
-def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
+def RFI_check(all_hist_csvs, data_dir, out_dir, sigma_threshold=2, bad_file_threshold=5, algorithm="turboSETI"):
     percent = "%"
+
+    if algorithm == "turboSETI":
+        import TESS_statistics.turboSETI.get_data as gd
+        historical_data = gd.get_data()
+    elif algorithm == "energy_detection":
+        import TESS_statistics.energy_detection.get_data as gd
+        historical_data = gd.get_data()
+    else:
+        print("ERROR:: please enter an acceptable algorithm input from the following:")
+        print("{turboSETI, energy_detection}")
+        exit()
 
     fig, axs = plt.subplots(2, 2, figsize=(10,10))
     bad_file_df = pd.DataFrame()
 
     # L band
+    historical_L = historical_data["L"]
     band = pd.read_csv(all_hist_csvs[1], index_col="filename")
     freqs = np.arange(1100, 1901)
     mask = np.where((freqs >=1200) & (freqs<= 1341))
@@ -555,6 +594,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
 
 
     # S band
+    historical_S = historical_data["S"]
     band = pd.read_csv(all_hist_csvs[2], index_col="filename")
     freqs = np.arange(1800, 2801)
     mask = np.where((freqs >= 2300) & (freqs <= 2360))
@@ -583,6 +623,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
 
 
     # C band
+    historical_C = historical_data["C"]
     band = pd.read_csv(all_hist_csvs[0], index_col="filename")
     a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
@@ -607,6 +648,7 @@ def RFI_check(all_hist_csvs, out_dir, sigma_threshold=2, bad_file_threshold=5):
 
 
     # X band
+    historical_X = historical_data["X"]
     band = pd.read_csv(all_hist_csvs[3], index_col="filename")
     a, b, max_z, max_z_frequency = flag_z(band, sigma_threshold)
     flag_counts = []
@@ -649,7 +691,7 @@ if __name__ == "__main__":
         missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, threshold=args.threshold)
     elif args.algorithm == "turboSETI":
         missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir)
-        RFI_df = RFI_check(all_hist_csvs, out_dir=args.outdir)
+        RFI_df = RFI_check(all_hist_csvs, args.data_dir, out_dir=args.outdir, algorithm=args.algorithm)
         RFI_df.to_csv(args.outdir + "bad_RFI.csv", index=False)
     else:
         print("ERROR:: please enter an acceptable algorithm input from the following:")

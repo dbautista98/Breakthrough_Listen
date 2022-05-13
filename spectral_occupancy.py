@@ -9,6 +9,38 @@ import os
 from tqdm import trange
 import pickle
 
+def band_edges(GBT_band):
+    """
+    Returns the edge frequencies of the Green Bank Telescope
+    bands for {L, S, C, X} bands, as listen in Traas 2021
+
+    Arguments
+    ----------
+    GBT_band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    
+    Returns
+    --------
+    min_freq : float
+        lowest frequency in the bandpass
+    max_freq : float
+        highest frequency in the bandpass
+    """
+    if GBT_band.upper()=="L":
+        min_freq = 1100
+        max_freq = 1900
+    if GBT_band.upper()=="S":
+        min_freq = 1800
+        max_freq = 2800
+    if GBT_band.upper()=="C":  
+        min_freq = 4000
+        max_freq = 7800
+    if GBT_band.upper()=="X":
+        min_freq = 7800
+        max_freq = 11200
+    return min_freq, max_freq
+
 def remove_spikes(dat_files, GBT_band):
     """
     Calls DC spike removal code on the list of 

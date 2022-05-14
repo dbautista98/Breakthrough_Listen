@@ -8,8 +8,8 @@ def get_data():
     csvs.sort()
 
     L = pd.read_csv(csvs[1], index_col="filename")
-    S = pd.read_csv(csvs[2])
-    C = pd.read_csv(csvs[0])
-    X = pd.read_csv(csvs[3])
+    S = pd.read_csv(csvs[2], index_col="filename")
+    C = pd.read_csv(csvs[0], index_col="filename")
+    X = pd.read_csv(csvs[3], index_col="filename")
 
     return {"L":L, "S":S, "C":C, "X":X}

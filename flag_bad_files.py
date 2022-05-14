@@ -341,9 +341,8 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
 def turbo_seti_file_summary(dat_path, band, source_file_name, threshold=4096):
     nodes, boundaries = node_boundaries(band)
     df = fe.read_dat(dat_path)
-    # df = remove_DC_spikes(df)
     df = format_turbo_seti(df)
-    results = turbo_seti_boxcar_analysis(df, nodes, boundaries, band) # problem
+    results = turbo_seti_boxcar_analysis(df, nodes, boundaries, band)
     missing_string = turbo_seti_check_missing(results)
     dropped_node_list = identify_missing_node(missing_string, nodes)
     if len(dropped_node_list) == 0:
@@ -438,35 +437,31 @@ def z_score(test_df, historical_df):
     
     return z_tbl
 
-def remove_DC_spikes(dat_file, GBT_band):
-    fch1, foff, nfpc, num_course_channels = dc.grab_parameters(dat_file, GBT_band)
-    spike_channels_list = dc.spike_channels(num_course_channels, nfpc)
-    freqs_fine_channels_list = dc.freqs_fine_channels(spike_channels_list, fch1, foff)
+def remove_DC_spikes(dat_file, GBT_band, outdir=""):
+    dc.remove_DC_spike(dat_file, outdir, GBT_band)
+    filename = os.path.basename(dat_file)
+    df = fe.read_dat(outdir + "/" + filename +"new.dat")
+    return df
 
-    freqs = dat_file["Freq"]
-    keep_mask = np.in1d(freqs, freqs_fine_channels_list, invert=True)
-    return dat_file[keep_mask]
+def check_dir(outdir):
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
-def list_to_df(test_data_lst, band):
+def list_to_df(test_data_lst, band, outdir=""):
+    save_dats_to = outdir + "%s_band_no_DC_spike"%band
+    check_dir(save_dats_to)
     df = pd.DataFrame()
     file_name = os.path.basename(test_data_lst[0])
 
-    # TEMPORARY
-    # test_data_lst[0] = remove_DC_spikes(fe.read_dat(test_data_lst[0]), band)
-    # end temporary code
-
-    hist, bin_edges = so.calculate_hist(test_data_lst[0], band, bin_width=1)
+    hist, bin_edges = so.calculate_hist(remove_DC_spikes(test_data_lst[0], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
     temp_dict = {"filename":file_name}
     for i in range(len(hist)):
         temp_dict[bin_edges[i]] = hist[i]
     df = df.append(temp_dict, ignore_index=True)
     
-    for i in range(len(test_data_lst)-1):
+    for i in trange(len(test_data_lst)-1):
         file_name = os.path.basename(test_data_lst[i+1])
-        # TEMPORARY
-        # test_data_lst[i+1] = remove_DC_spikes(fe.read_dat(test_data_lst[i+1]), band)
-        # end temporary code
-        hist, edges = so.calculate_hist(test_data_lst[i+1], band, bin_width=1)
+        hist, edges = so.calculate_hist(remove_DC_spikes(test_data_lst[i+1], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":file_name}
         for j in range(len(hist)):
@@ -476,6 +471,9 @@ def list_to_df(test_data_lst, band):
     
     df = df.set_index("filename")
     
+    remove_statement = "rm -rf %s"%save_dats_to
+    os.system(remove_statement)
+
     return df
 
 def flag_z(test_df, historical_df, min_z):
@@ -559,8 +557,7 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     out_z_scores = max_z[mask]
     out_z_frequency = max_z_frequency[mask]
     for i in range(len(out_z_frequency)):
-        # as_list = np.array(out_z_frequency[i], dtype=object).tolist()
-        out_z_frequency[i] = ' '.join(str(v) for v in out_z_frequency[i]) #" ".join(as_list)
+        out_z_frequency[i] = ' '.join(str(v) for v in out_z_frequency[i])
 
     # target_names = []
     # for target in out_files:
@@ -583,10 +580,8 @@ def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=
         print("{turboSETI, energy_detection}")
         exit()
 
-    # TEMPORARY::
     dat_list = glob.glob(test_df+"/*dat")
-    test_df = list_to_df(dat_list, GBT_band)
-    # end temporary
+    test_df = list_to_df(dat_list, GBT_band, outdir=out_dir)
 
     plt.figure(figsize=(6,6))
     bad_file_df = pd.DataFrame()
@@ -619,7 +614,18 @@ def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=
     hist_counts = []
     for entry in hist_freqs:
         hist_counts.append(len(entry))
-    hy, hx = np.histogram(hist_counts, bins=50)
+    
+    # set bins for specific band
+    if GBT_band == "L":
+        bins=50
+    elif GBT_band == "S":
+        bins = np.arange(0, 41, 2)
+    elif GBT_band == "C":
+        bins = np.arange(0, 151, 3)
+    elif GBT_band == "X":
+        bins = np.arange(0, 151, 7)
+
+    hy, hx = np.histogram(hist_counts, bins=bins)
     popt, pcov = curve_fit(gaussian,hx[:-1],hy)#, p0=(3, 200))
     critical_x = set_threshold(popt[1], popt[2], bad_file_threshold, hx, hy)
 
@@ -648,7 +654,6 @@ if __name__ == "__main__":
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("data_dir", help="directory where the output files (.dat or .csv) are stored")
     parser.add_argument("algorithm", help="algorithm used to generate the files. use either {turboSETI, energy_detection} as input")
-    # parser.add_argument("histogram_dir", help="directory where the turboSETI histogram (.csv) are stored. run PROGRAM NAME HERE to generate") # update to work with the energy detection histograms
     parser.add_argument("-threshold", "-t", help="Note: for energy detection files only! The threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     parser.add_argument("-outdir", "-o", help="directory where the results are saved", default="")
     args = parser.parse_args()
@@ -657,19 +662,21 @@ if __name__ == "__main__":
     if args.outdir != "":
         args.outdir = args.outdir + "/"
 
-    # all_hist_csvs = glob.glob(args.histogram_dir + "/*ALL*csv")
-    # all_hist_csvs.sort()
     missing_files_df = pd.DataFrame()
 
     if args.algorithm == "energy_detection":
         missing_files_df = energy_detection_driver(missing_files_df, args.data_dir, threshold=args.threshold)
+        missing_files_df.to_csv(args.outdir + "%s_band_dropped_nodes.csv"%args.band, index=False)
     elif args.algorithm == "turboSETI":
+        print("Checking for dropped nodes")
         missing_files_df = turbo_seti_driver(missing_files_df, args.data_dir, args.band)
-        RFI_df = RFI_check(test_df=args.data_dir, out_dir=args.outdir, GBT_band=args.band, algorithm=args.algorithm)#RFI_check(args.data_dir, out_dir=args.outdir, algorithm=args.algorithm)
+        missing_files_df.to_csv(args.outdir + "%s_band_dropped_nodes.csv"%args.band, index=False)
+        print("Checking for high RFI")
+        RFI_df = RFI_check(test_df=args.data_dir, out_dir=args.outdir, GBT_band=args.band, algorithm=args.algorithm)
         RFI_df.to_csv(args.outdir + "%s_band_bad_RFI.csv"%args.band, index=False)
     else:
         print("ERROR:: please enter an acceptable algorithm input from the following:")
         print("{turboSETI, energy_detection}")
         exit()
 
-    missing_files_df.to_csv(args.outdir + "%s_band_dropped_nodes.csv"%args.band, index=False)
+    print("Done!")

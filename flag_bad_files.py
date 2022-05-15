@@ -1,4 +1,3 @@
-from importlib.util import spec_from_file_location
 import pandas as pd
 import pandas
 import numpy as np
@@ -637,7 +636,7 @@ def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=
     plt.vlines(critical_x, 0, popt[0], color="red")
     plot_x = np.linspace(0, np.max(x), 1000)
     flag_fraction = percent_above_threshold(critical_x, x, y)
-    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, "L"), ignore_index=True)
+    bad_file_df = bad_file_df.append(identify_flagged_files(critical_x, a, b, max_z, max_z_frequency, GBT_band), ignore_index=True)
     plt.scatter(0,0, s=1, label="percent bad files: %.2f%s"%((flag_fraction*100), percent))
     plt.plot(plot_x, gaussian(plot_x, *popt), label="fit $\sigma$ = %.3f"%popt[-1])
     plt.legend()

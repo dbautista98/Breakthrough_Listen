@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # make the rest of the histograms
     print("Calculating remaining histograms...", end="")
     for i in trange(len(dat_files)-1):
-        file_name = os.path.basename(dat_files[i])
+        file_name = os.path.basename(dat_files[i+1])
         hist, edges = so.calculate_hist(dat_files[i+1], args.band, bin_width=args.width)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":file_name}

@@ -452,12 +452,14 @@ def list_to_df(test_data_lst, band, outdir=""):
     df = pd.DataFrame()
     file_name = os.path.basename(test_data_lst[0])
 
+    # remove DC spike channels and add first file histogram to dataframe
     hist, bin_edges = so.calculate_hist(remove_DC_spikes(test_data_lst[0], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
     temp_dict = {"filename":file_name}
     for i in range(len(hist)):
         temp_dict[bin_edges[i]] = hist[i]
     df = df.append(temp_dict, ignore_index=True)
     
+    # remove DC spike channels and add remaining histograms to dataframe
     for i in trange(len(test_data_lst)-1):
         file_name = os.path.basename(test_data_lst[i+1])
         hist, edges = so.calculate_hist(remove_DC_spikes(test_data_lst[i+1], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
@@ -532,8 +534,6 @@ def set_threshold(mean, SD, threshold_SD, x_data, y_data):
     critical_x = (mean + threshold_SD*SD)
     mask = np.where(x_data[:-1] > critical_x)
     above_threshold = y_data[mask]
-    number_above_threshold = np.sum(above_threshold)
-    total_hits = np.sum(y_data)
     return critical_x
 
 def percent_above_threshold(threshold, x_data, y_data):
@@ -644,7 +644,7 @@ def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=
     plt.xlabel("Number of channels flagged")
     plt.ylabel("count")
 
-    plt.savefig(out_dir + "%s_band_flag_count_grid.pdf"%GBT_band, bbox_inches="tight", transparent=False)
+    plt.savefig(out_dir + "%s_band_flag_count.pdf"%GBT_band, bbox_inches="tight", transparent=False)
 
     return bad_file_df
 

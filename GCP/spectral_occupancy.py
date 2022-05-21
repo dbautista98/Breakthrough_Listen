@@ -246,7 +246,8 @@ if __name__ == "__main__":
 
     print("Saving plot...",end="")
     plt.figure(figsize=(20, 10))
-    plt.bar(bin_edges[:-1], prob_hist, width=1) 
+    width = np.diff(bin_edges)[0]
+    plt.bar(bin_edges[:-1], prob_hist, width=width) 
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy with threshold of %s: n=%s"%(args.threshold, len(files)))

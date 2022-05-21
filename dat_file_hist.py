@@ -90,7 +90,8 @@ if __name__ == "__main__":
 
     # save histogram plot
     plt.figure(figsize=(20, 10))
-    plt.bar(df["frequency"], df["count"], width=1)
+    width = np.diff(bin_edges)[0]
+    plt.bar(df["frequency"], df["count"], width=width)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("Count")
     plt.title("%s Band turboSETI Histogram with n=%s files"%(args.band, len(dat_files)))

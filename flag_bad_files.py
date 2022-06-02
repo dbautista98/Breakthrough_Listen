@@ -471,7 +471,8 @@ def list_to_df(test_data_lst, band, outdir=""):
         df = df.append(temp_df, ignore_index=True)
     
     df = df.set_index("filename")
-    
+
+    # remove the directory containing the cleaned dat files
     remove_statement = "rm -rf %s"%save_dats_to
     os.system(remove_statement)
 
@@ -555,14 +556,18 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     out_flags = n_flags[mask]
     out_z_scores = max_z[mask]
     out_z_frequency = max_z_frequency[mask]
+    new_out_z_freq = []
     for i in range(len(out_z_frequency)):
-        out_z_frequency[i] = ' '.join(str(v) for v in out_z_frequency[i])
+        if len(out_z_frequency[i]) > 1:
+            new_out_z_freq.append(' '.join(str(v) for v in out_z_frequency[i]))
+        else:
+            new_out_z_freq.append(str(out_z_frequency[i][0]))
 
     # target_names = []
     # for target in out_files:
     #     target_names.append(get_target_name(target))
     
-    data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask], "max z score":out_z_scores, "max z frequency":out_z_frequency}
+    data_dict = {"filename":filenames[mask], "band":[band]*np.sum(mask), "bins flagged":n_flags[mask], "max z score":out_z_scores, "max z frequency bin":new_out_z_freq}
     return pd.DataFrame(data_dict)
 
 def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=5, algorithm="turboSETI"):

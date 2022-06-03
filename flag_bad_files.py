@@ -26,6 +26,10 @@ def node_boundaries(band, output="default"):
     band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
+    output : str
+        option for the output form of the data.
+        `default` returns nodes, boundaries 
+        `dict` returns a dictionary containing the pairs
     
     Returns
     --------
@@ -94,7 +98,25 @@ def select_node(df, fch1):
     reduced_df = df.iloc[mask]
     return reduced_df
 
-def check_possible_data(df, fch1, band_edges):
+def check_possible_data(fch1, band_edges):
+    """
+    checks if the value of fch1 is within the 
+    frequency bounds of what is considered useful data
+
+    Arguments
+    ----------
+    fch1 : float
+        center frequency of the first fine channel
+    band_edges : numpy.ndarray
+        array containing the highest and lowest frequencies
+        that will be considered for the band
+    
+    Returns
+    --------
+    in_range : bool
+        status of whether or not fch1 is within the given frequency bounds
+    """
+
     in_range = (fch1 < np.max(band_edges)) and ((fch1) > np.min(band_edges))
     return in_range
 
@@ -152,13 +174,37 @@ def energy_detection_boxcar_analysis(df, nodes, boundaries):
     return result_df
 
 def turbo_seti_boxcar_analysis(df, nodes, boundaries, band):
+    """
+    steps through the frequency intervals corresponding to each 
+    compute node and calculates the mean and standard deviation 
+    of the data in the interval
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing processed data from an observation
+    nodes : list
+        the name of the compute node which the data
+        was processed on
+    boundaries : numpy.ndarray
+        the filterband fch1, as reported in Lebofsky et al 2019
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+
+    Returns
+    --------
+    result_df : pandas.core.frame.DataFrame
+        DataFrame summarizing the data within across 
+        all compute nodes
+    """
     data_present = np.empty_like(boundaries, dtype=bool)
     band_edges = np.array(so.band_edges(band))
     
     for i in range(len(boundaries)):
         fch1 = boundaries[i]
         df_subset = select_node(df, fch1)
-        possible_data = check_possible_data(df_subset, fch1, band_edges)
+        possible_data = check_possible_data(fch1, band_edges)
         if not possible_data:
             data_present[i] = True
         else:
@@ -241,6 +287,22 @@ def energy_detection_check_missing(results_df):
     return bitmap_string
 
 def turbo_seti_check_missing(results_df):
+    """
+    uses the file summary data to determine if 
+    there were any dropped compute nodes 
+
+    Arguments
+    ----------
+    results_df : pandas.core.frame.DataFrame
+        DataFrame summarizing the data within across 
+        all compute nodes
+    
+    Returns
+    --------
+    dropped_nodes : str
+        a bitmap string of which nodes are dropped
+        starting with blc00 and ending on the highest blcXX
+    """
     nodes = results_df["nodes"].values
     has_data = results_df["data present"].values
     node_drops = []
@@ -280,6 +342,20 @@ def identify_missing_node(bitmap, nodes):
     return list(np.array(nodes)[mask])
 
 def get_target_name(filename):
+    """
+    picks the name of the source target based
+    on the naming convention of the h5 files
+
+    Arguments
+    ----------
+    filename : str
+        string containing the complete filepath to the data
+
+    Returns
+    --------
+    source_name : str
+        the name of the source observed in the given file
+    """
     base_name = filename.split("/")
     file_name = base_name[-1]
     target_name = file_name.split("_")
@@ -337,7 +413,38 @@ def energy_detection_file_summary(csv_path, band, source_file_name, threshold=40
     summary_df = temp_df.append(summary_dict, ignore_index=True)
     return summary_df[["filename", "band", "dropped node bitmap", "dropped node", "algorithm"]]
 
-def turbo_seti_file_summary(dat_path, band, source_file_name, threshold=4096):
+def turbo_seti_file_summary(dat_path, band, source_file_name):
+    """
+    Determines if an energy detection file is missing any 
+    nodes. If the file is missing a node(s) this function 
+    will return a pandas DataFrame containing the filename, 
+    band, and a bitmap showing which node(s) dropped
+
+    Arguments
+    ----------
+    dat_path : str
+        filepath to the dat file
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    source_file_name : str
+        the name of the original .h5 file that the data comes from
+
+    Returns
+    --------
+    summary_df : pandas.core.frame.DataFrame
+        A pandas DataFrame containing the information 
+        about the missing nodes. There are two possible
+        outputs: 
+           1)  For a file with no dropped nodes, this 
+               function will return an empty DataFrame
+
+           2)  A DataFrame containing information about
+               the missing nodes, formatted as follows
+
+               filename         band       dropped node bitmap        algorithm
+                 filename.h5     L            00010001                  turboSETI
+    """
     nodes, boundaries = node_boundaries(band)
     df = fe.read_dat(dat_path)
     df = format_turbo_seti(df)
@@ -368,8 +475,11 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
         list of paths to the csv or dat files to be checked
     source_list : list
         list file names of the corresponding h5 files
-    band_list : 
+    band_list : list
         list of the corresponding bands the data was collected from
+    threshold : float
+        The minimum value of an allowed hit, below which
+        all will be rejected
 
     Returns
     --------
@@ -382,12 +492,54 @@ def check_many_energy_detection_files(missing_files_df, data_list, source_list, 
     return missing_files_df
 
 def check_many_turbo_seti_files(missing_files_df, data_list, source_list, band_list):
+    """
+    loops over many files and each checks for missing nodes
+
+    Arguments
+    ----------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of known files missing nodes. If no files
+        are known, pass in an empty DataFrame
+    data_list : list
+        list of paths to the csv or dat files to be checked
+    source_list : list
+        list file names of the corresponding h5 files
+    band_list : list
+        list of the corresponding bands the data was collected from
+
+    Returns
+    --------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of all the files flagged for missing nodes
+    """
     for i in trange(len(data_list)):
         one_file_df = turbo_seti_file_summary(data_list[i], band_list[i].upper(), source_list[i])
         missing_files_df = missing_files_df.append(one_file_df, ignore_index=True)
     return missing_files_df
 
 def energy_detection_driver(missing_files_df, data_dir, threshold=4096):
+    """
+    function that checks many files and makes a list
+    of which files suffer from data loss due to dropped nodes
+
+    Arguments
+    ----------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of known files missing nodes. If no files
+        are known, pass in an empty DataFrame
+    data_dir : str
+        path to the directory containing the folders
+        with the results of running the energy detection 
+        algorithm on many files
+    threshold : float
+        The minimum value of an allowed hit, below which
+        all will be rejected
+
+    Returns
+    --------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of all the files flagged for missing nodes
+    """
     csv_name = "all_info_df.csv"
     bands = ["l", "s", "c", "x"]
 
@@ -410,6 +562,28 @@ def energy_detection_driver(missing_files_df, data_dir, threshold=4096):
     return missing_files_df
 
 def turbo_seti_driver(missing_files_df, data_dir, band):
+    """
+    function that checks many files and makes a list
+    of which files suffer from data loss due to dropped nodes
+
+    Arguments
+    ----------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of known files missing nodes. If no files
+        are known, pass in an empty DataFrame
+    data_dir : str
+        path to the directory containing the folders
+        with the results of running the energy detection 
+        algorithm on many files
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+
+    Returns
+    --------
+    missing_files_df : pandas.core.frame.DataFrame
+        DataFrame of all the files flagged for missing nodes
+    """
     print("gathering %s band files"%(band.upper()))
     source_files = []
     dat_files = glob.glob(data_dir + "/*dat")
@@ -424,6 +598,24 @@ def turbo_seti_driver(missing_files_df, data_dir, band):
     return missing_files_df
 
 def z_score(test_df, historical_df):
+    """
+    calculates the z-score for each entry in test_df 
+    based on the corresponding data from historical_df
+
+    Arguments
+    ----------
+    test_df : pandas.core.frame.DataFrame
+        DataFrame of the test data
+    historical_df : pandas.core.frame.DataFrame
+        DataFrame of the historical dat files that 
+        the test data will be compared to
+
+    Returns
+    --------
+    z_tbl : numpy.ndarray
+        the z-score of each entry in test_df, based
+        on the data from historical_df
+    """
     x = np.array(test_df)
     historical = np.array(historical_df)
     mean = np.mean(historical, axis=0)
@@ -437,16 +629,64 @@ def z_score(test_df, historical_df):
     return z_tbl
 
 def remove_DC_spikes(dat_file, GBT_band, outdir=""):
+    """
+    removes the DC spike channels from a dat file 
+    and stores its contents in a DataFrame
+
+    Arguments
+    ----------
+    dat_file : str
+        filepath to the dat file to be cleaned
+    GBT_band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    outdir : str
+        the filepath to where the cleaned dat files will be stored
+
+    Returns
+    --------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing the cleaned dat file data
+    """
     dc.remove_DC_spike(dat_file, outdir, GBT_band)
     filename = os.path.basename(dat_file)
     df = fe.read_dat(outdir + "/" + filename +"new.dat")
     return df
 
 def check_dir(outdir):
+    """
+    checks for the existence of a directory and creates 
+    the directory if it does not exist
+
+    Arguments
+    ----------
+    outdir : str
+        the directory path to be checked for
+    """
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
 def list_to_df(test_data_lst, band, outdir=""):
+    """
+    takes a list of dat file paths, removes their
+    DC spike channels, and returns a DataFrame containing
+    the cleaned data
+
+    Arguments
+    ----------
+    test_data_lst : list
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    outdir : str
+        the filepath to where the cleaned dat files will be temporarily stored
+
+    Returns
+    --------
+    hist_df : pandas.core.frame.DataFrame
+        DataFrame containing the histogram of the hit distribuiton
+        from the set of dat files
+    """
     save_dats_to = outdir + "%s_band_no_DC_spike"%band
     check_dir(save_dats_to)
     df = pd.DataFrame()
@@ -487,7 +727,7 @@ def flag_z(test_df, historical_df, min_z):
     Arguments:
     -----------
     test_df : pandas.core.frame.DataFrame
-        DataFrame containing the detected event data
+        DataFrame containing the detected hit data
     historical_df : pandas.core.frame.DataFrame
         DataFrame containing historical data calculated from 
         long-term TESS targets observed at GBT
@@ -529,19 +769,93 @@ def flag_z(test_df, historical_df, min_z):
     return flagged_files, flagged_freqs, flagged_max_z, flagged_max_z_frequency
 
 def gaussian(x, A, mu, sigma):
+    """
+    Returns a gaussian of the form
+    A*exp(-0.5(mu - x)^2 / sigma^2)
+    """
     return A*np.exp(-0.5 * (x-mu)**2 / sigma**2)
 
 def set_threshold(mean, SD, threshold_SD, x_data, y_data):
+    """
+    sets the critical threshold for the number of 
+    bins flagged for a file to be considered affected by RFI
+
+    Arguments
+    ----------
+    mean : float
+        the mean of the gaussian fit
+    SD : float
+        the standard deviation of the gaussian fit
+    threshold_SD : float
+        the number of standard deviations above the mean 
+        the number of hits must be for it to be flagged
+    x_data : numpy.ndarray
+        the bin edges of the corresponding histogram
+    y_data : numpy.ndarray
+        the bin heights of the corresponding histogram
+
+    Returns
+    --------
+    critical_x : float
+        the threshold value for the number of flagged bins, 
+        above which a file will be considered to be affected by RFI
+    """
     critical_x = (mean + threshold_SD*SD)
     mask = np.where(x_data[:-1] > critical_x)
     above_threshold = y_data[mask]
     return critical_x
 
 def percent_above_threshold(threshold, x_data, y_data):
+    """
+    calculates the percent of files above the determined threshold
+
+    Arguments
+    ----------
+    threshold : float
+        the threshold above which files will be considered flagged
+    x_data : numpy.ndarray
+        the bin edges of the histogram
+    y_data : numpy.ndarray
+        the bin heights of the histogram
+
+    Returns
+    --------
+    percent_flagged : float
+        the percent of files found to be above the threshold
+    """
     mask = np.where((x_data[:-1] > threshold) & (y_data > 0))
     return np.sum(y_data[mask])/np.sum(y_data)
 
 def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, band):
+    """
+    identifies the name, band, bins flagged, max z score, and frequency of the highest z-score(s)
+
+    Arguments
+    ----------
+    threshold : float
+        the threshold above which files will be considered flagged
+    filenames : list
+        the names of the files that were flagged for having 
+        higher than usual hit counts in some bins
+    freqs : numpy.ndarray
+        the frequencies that were flagged as having 
+        a higher than usual number of hits
+    max_z : numpy.ndarray
+        the highest z_score for a given file
+    max_z_frequency : numpy.ndarray
+        the frequency(s) corresponding with the highest z-score
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+
+    Returns
+    --------
+    flag_df : pandas.core.frame.DataFrame
+        DataFrame containing the relevant info for the flagged files.
+        Example row from DataFrame
+                    filename            band        bins flagged          max z score         max z frequency bin
+                    example file.h5      L              42                  12.2245                 1234
+    """
     if type(filenames) == pandas.core.indexes.base.Index:
         filenames = filenames.values
     n_flags = np.empty(len(freqs))
@@ -571,6 +885,39 @@ def identify_flagged_files(threshold, filenames, freqs, max_z, max_z_frequency, 
     return pd.DataFrame(data_dict)
 
 def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=5, algorithm="turboSETI"):
+    """
+    checks dat files against historical data to determine 
+    whether or not they were affected by RFI
+
+    Arguments
+    ----------
+    test_df : pandas.core.frame.DataFrame
+        DataFrame containing the detected event data
+    out_dir : str
+        the filepath to where the results will be stored
+    GBT_band : str
+    the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    sigma_threshold : float
+        the number of standard deviations from the mean
+        a hit count needs to be in order to be flagged
+    bad_file_threshold : float
+        the number of standard deviations from the historical
+        mean flag count distribution a file needs to be in order 
+        to be considered affected by RFI
+    algorithm : str
+        algorithm used to generate the files. 
+        Chose from {turboSETI, energy_detection} as input
+
+    Returns
+    --------
+    bad_file_df : pandas.core.frame.DataFrame
+        DataFrame containing information about the files
+        that are flagged for being affected by RFI
+    band_flag_count.pdf : saved file
+        a plot showing the distribution of the test files 
+        compared to the gaussian fit to the historical data
+    """
     percent = "%"
 
     if algorithm == "turboSETI":
@@ -657,7 +1004,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="passes over turboSETI or Energy Detection files and identifies files that are affected by compute node dropout, identifiable by a total absense of data in an interval of 187.5 MHz from the start of the channel")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("data_dir", help="directory where the output files (.dat or .csv) are stored")
-    parser.add_argument("algorithm", help="algorithm used to generate the files. use either {turboSETI, energy_detection} as input")
+    parser.add_argument("algorithm", help="algorithm used to generate the files. Choose from {turboSETI, energy_detection} as input")
     parser.add_argument("-threshold", "-t", help="Note: for energy detection files only! The threshold below which all hits will be excluded. Default is 4096", type=float, default=4096)
     parser.add_argument("-outdir", "-o", help="directory where the results are saved", default="")
     args = parser.parse_args()

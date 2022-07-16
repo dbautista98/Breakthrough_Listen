@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     # grab turboSETI cadence search results 
     if args.folder is not None:
-        paths = glob.glob(args.folder + "/*")
+        paths = glob.glob(args.folder + "/*csv")
         cadences = combine_frames(paths)
     elif args.text is not None:
         paths = read_txt(args.text)

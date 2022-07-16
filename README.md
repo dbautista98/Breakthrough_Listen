@@ -20,6 +20,6 @@ In the latter part of the semester, I resumed working on long-term GBT statistic
 PS: if you have some .dat files that you are willing to share, feel free to reach out to me on Slack or at my email above :)
 
 
-## Fall 2021
+## Fall - Spring 2021
 
 This semester I am working on estimating the likelihood that a signal flagged as interesting by turboSETI is a false positive and is instead due to a satellite passing over the telescope. The data I am using for this analysis was collected at Green Bank Telescope and initially used by Raffy Traas. To do this comparison, I will start by comparing the results of turboSETI to the results of Yuhong's [energy detection](https://github.com/FX196/SETI-Energy-Detection) algorithm. To do this, I am generating spectral occupancy plots using data from turboSETI's dat file outputs and Energy Detection's csv outputs. 

@@ -73,7 +73,7 @@ def make_scatter(band_df, occupancy_dict, band, save_dir):
     plt.scatter(band_df["Freq"].values, band_rankings)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("ranking")
-    plt.title("%s-band ranking vs frequency"%band)
+    plt.title("%s-band ranking vs frequency N = %s candidates"%(band, len(band_rankings)))
     plt.savefig(save_dir + "/%sband_freq_vs_ranking.png"%band.lower(), bbox_inches="tight", transparent=False)
 
 if __name__ == "__main__":

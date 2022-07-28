@@ -59,7 +59,7 @@ def make_plots(band_df, occupancy_dict, band, save_dir, bins=50):
     _ = plt.hist(band_rankings, bins=bins)
     plt.xlabel("ranking")
     plt.ylabel("count")
-    plt.title("%s-band Rankings"%band)
+    plt.title("%s-band Rankings N = %s candidates"%(band, len(band_rankings)))
     plt.savefig(save_dir + "/%sband_ranking.png"%band.lower(), bbox_inches="tight", transparent=False)
     
     band_df.insert(0, "ranking", band_rankings)

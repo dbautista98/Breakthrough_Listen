@@ -51,7 +51,7 @@ def rank_candidates(hit_freq, occupancy_dict):
         hit_occupancy = occupancy[hit_index]
         this_weight = calculate_weight(hit_occupancy)
         # check that the frequency is within the accepted range
-        if this_weight != []: # hit is within the acceptable band range
+        if len(this_weight) > 0: # hit is within the acceptable band range
             rankings[i] = calculate_weight(hit_occupancy)
         else: # hit is outside acceptable band range and is not interesting
             rankings[i] = 0

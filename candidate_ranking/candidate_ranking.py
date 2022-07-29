@@ -49,7 +49,12 @@ def rank_candidates(hit_freq, occupancy_dict):
         freq = hit_freq[i]
         hit_index = np.where((bin_edges >= np.floor(freq)) & (bin_edges < np.ceil(freq)))
         hit_occupancy = occupancy[hit_index]
-        rankings[i] = calculate_weight(hit_occupancy)
+        this_weight = calculate_weight(hit_occupancy)
+        # check that the frequency is within the accepted range
+        if this_weight != []: # hit is within the acceptable band range
+            rankings[i] = calculate_weight(hit_occupancy)
+        else: # hit is outside acceptable band range and is not interesting
+            rankings[i] = 0
     return rankings
 
 def make_plots(band_df, occupancy_dict, band, save_dir, bins=50):

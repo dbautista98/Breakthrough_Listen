@@ -30,8 +30,8 @@ if __name__ == "__main__":
     # parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
     args = parser.parse_args()
 
-    csv_paths = glob.glob(args.csv_dir)
-    df = reduce_frames(csv_paths+"/*/*.csv")
+    csv_paths = glob.glob(args.csv_dir + "/*/*.csv")
+    df = reduce_frames(csv_paths)
 
     hist, bin_edges = so.calculate_hist(df, args.band)
 

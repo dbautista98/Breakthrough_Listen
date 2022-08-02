@@ -43,7 +43,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(10,5))
     plt.bar(bin_edges[:-1], hist, width=1)
     plt.xlabel("Frequency [Mhz]")
-    plt.ylabel("Number of Hits")
+    plt.ylabel('Number of Candiate "Signals"')
     plt.title("Histogram of Chance Candidates\nN = %s observations and N = %s with candidates"%(len(total_observations), len(csv_paths)))
     plt.savefig(args.outdir + "%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
     plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)

@@ -32,6 +32,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     csv_paths = glob.glob(args.csv_dir + "/*/*.csv")
+    total_observations = glob.glob(args.csv_dir + "*")
     df = reduce_frames(csv_paths)
 
     hist, bin_edges = so.calculate_hist(df, args.band)
@@ -43,6 +44,6 @@ if __name__ == "__main__":
     plt.bar(bin_edges[:-1], hist, width=1)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Number of Hits")
-    plt.title("Histogram of Chance Candidates, N = %s observations"%len(csv_paths))
+    plt.title("Histogram of Chance Candidates\nN = %s observations and N = %s with candidates"%(len(total_observations), len(csv_paths)))
     plt.savefig(args.outdir + "%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
     plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)

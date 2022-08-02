@@ -19,7 +19,7 @@ def reduce_frames(csv_list):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
-    parser.add_argument("csv_dir", help="directory .csv files are held in. Include the path all the way to *.csv, ie: /path/to/csv/files/*csv")
+    parser.add_argument("csv_dir", help="directory .csv files are held in")
     # parser.add_argument("h5_dir", help="directory .h5 files are held in")
     parser.add_argument("outdir", help="directory where the output cadences searches will be saved")
     # parser.add_argument("-n_iterations", "-n", help="number of random cadences to generate and search, default is 1 random shuffle", default=1)
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     csv_paths = glob.glob(args.csv_dir)
-    df = reduce_frames(csv_paths)
+    df = reduce_frames(csv_paths+"*.csv")
 
     hist, bin_edges = so.calculate_hist(df, args.band)
 

@@ -90,7 +90,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # random_cadence_search(args.dat_dir, args.h5_dir, args.outdir, int(args.n_iterations))
-    pool = Pool(args.parallel)                         # Create a multiprocessing Pool
+    pool = Pool(int(args.parallel))                         # Create a multiprocessing Pool
     t_start = time.time()
     data_inputs = [[args.dat_dir,args.h5_dir,args.outdir,i] for i in range(int(args.n_iterations))]
     pool.map(random_cadence_search_parallel, data_inputs)

@@ -41,5 +41,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Histogram of Chance Candidates")
-    plt.savefig("%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
-    plt.savefig("%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)
+    plt.savefig(args.outdir + "%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
+    plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)

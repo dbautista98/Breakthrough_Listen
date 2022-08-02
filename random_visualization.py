@@ -31,7 +31,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     csv_paths = glob.glob(args.csv_dir)
-    df = reduce_frames(csv_paths+"*.csv")
+    df = reduce_frames(csv_paths+"/*/*.csv")
 
     hist, bin_edges = so.calculate_hist(df, args.band)
 

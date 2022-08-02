@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     hist, bin_edges = so.calculate_hist(df, args.band)
 
-    plt.figure(figzise=(10,5))
+    plt.figure(figsize=(10,5))
     plt.bar(bin_edges[:-1], hist, width=1)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")

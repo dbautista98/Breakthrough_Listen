@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse 
+from tqdm import trange
 
 try:
     import spectral_occupancy as so
@@ -11,8 +12,8 @@ except:
 
 def reduce_frames(csv_list):
     df = pd.DataFrame()
-    for csv in csv_list:
-        temp = pd.read_csv(csv)
+    for i in trange(len(csv_list)):
+        temp = pd.read_csv(csv_list[i])
         df = df.append(temp, ignore_index=True)
     return df
 

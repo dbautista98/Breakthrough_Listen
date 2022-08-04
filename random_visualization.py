@@ -30,7 +30,7 @@ def plot_pipeline(plot_directory):
                         h5_list_string, 
                         user_validation=False,
                         filter_spec=3,
-                        sort_by_tstart=False,
+                        sortby_tstart=False,
                         plot_dir=plot_dir)
 
 if __name__ == "__main__":
@@ -71,8 +71,9 @@ if __name__ == "__main__":
     else:
         print("making waterfall plots of events")
         from old_turbo_seti.turbo_seti.find_event.plot_event_pipeline import plot_event_pipeline
-        for i in range(len(csv_paths)):
-            csv_paths[i] = os.path.dirname(csv_paths[i]) + "/"
+        # for i in range(len(csv_paths)):
+        #     csv_paths[i] = os.path.dirname(csv_paths[i]) + "/"
+        data_inputs = [(os.path.dirname(path) + "/") for path in csv_paths]
 
         t_start = time.time()
         pool = Pool(int(args.parallel))

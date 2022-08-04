@@ -1,5 +1,4 @@
 import glob
-from unicodedata import decimal
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,11 +7,6 @@ import os
 import time
 from tqdm import trange
 from multiprocessing import Pool
-
-try:
-    import spectral_occupancy as so
-except:
-    from . import spectral_occupancy as so
 
 def reduce_frames(csv_list):
     df = pd.DataFrame()
@@ -53,6 +47,11 @@ if __name__ == "__main__":
 
     # make the histogram plots
     if not args.waterfall:
+        try:
+            import spectral_occupancy as so
+        except:
+            from . import spectral_occupancy as so
+            
         df = reduce_frames(csv_paths)
 
         hist, bin_edges = so.calculate_hist(df, args.band)

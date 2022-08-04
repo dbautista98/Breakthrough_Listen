@@ -47,11 +47,12 @@ if __name__ == "__main__":
 
     # make the histogram plots
     if not args.waterfall:
+        print("making histogram plots at", (args.outdir + "%s_band_random_chance_candidates.pdf"%args.band))
         try:
             import spectral_occupancy as so
         except:
             from . import spectral_occupancy as so
-            
+
         df = reduce_frames(csv_paths)
 
         hist, bin_edges = so.calculate_hist(df, args.band)
@@ -68,6 +69,7 @@ if __name__ == "__main__":
         plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)
 
     else:
+        print("making waterfall plots of events")
         from old_turbo_seti.turbo_seti.find_event.plot_event_pipeline import plot_event_pipeline
         for i in range(len(csv_paths)):
             csv_paths[i] = os.path.dirname(csv_paths[i]) + "/"

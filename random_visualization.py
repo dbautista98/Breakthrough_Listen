@@ -12,6 +12,7 @@ def reduce_frames(csv_list):
     df = pd.DataFrame()
     for i in trange(len(csv_list)):
         temp = pd.read_csv(csv_list[i])
+        temp = temp[temp["status"] == "on_table_1"] # reduce hits to only the first target hits
         df = df.append(temp, ignore_index=True)
     return df
 
@@ -56,9 +57,6 @@ if __name__ == "__main__":
         df = reduce_frames(csv_paths)
 
         hist, bin_edges = so.calculate_hist(df, args.band)
-
-        # account for triple counting hits due to version of turboSETI used
-        hist = hist/3
 
         plt.figure(figsize=(10,5))
         plt.bar(bin_edges[:-1], hist, width=1)

@@ -57,11 +57,15 @@ if __name__ == "__main__":
         df = reduce_frames(csv_paths)
 
         hist, bin_edges = so.calculate_hist(df, args.band)
+        data_dict = {"frequency":bin_edges[:-1], "counts":hist}
+        data_df = pd.DataFrame(data_dict)
+        data_df.to_csv(args.outdir + "%s_band_random_chance_candidates.csv"%args.band)
+
 
         plt.figure(figsize=(10,5))
         plt.bar(bin_edges[:-1], hist, width=1)
         plt.xlabel("Frequency [Mhz]")
-        plt.ylabel('Number of Candiate "Signals"')
+        plt.ylabel('Number of Candidate "Signals"')
         plt.title("Histogram of Chance Candidates\nN = %s observations and n = %s with candidates"%(len(total_observations), len(csv_paths)))
         plt.savefig(args.outdir + "%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
         plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)

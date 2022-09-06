@@ -1,3 +1,4 @@
+from tempfile import tempdir
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,6 +9,11 @@ import argparse
 import os
 from tqdm import trange
 import pickle
+from astropy import units as u
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from astropy.time import Time
+from astroplan import Observer
+from astroplan.plots import plot_sky
 
 def band_edges(GBT_band):
     """
@@ -65,16 +71,24 @@ def remove_spikes(dat_files, GBT_band):
     new_dat_files : lst
         a python list of the filepaths to the new
         .dat files which no longer contain DC spikes
+    loc_df : pandas.core.frame.DataFrame
+        DataFrame containing the RA, DEC, and MJD of the observation
+        this can be used to calculate the pointing of the telescope
     """
     import remove_DC_spike
     
     new_dat_files = []
-    
+    loc_df = pd.DataFrame()
+
     for i in trange(len(dat_files)):
         #get the path
         dat = dat_files[i]
         path = os.path.dirname(dat)
         old_dat = os.path.basename(dat)
+        dat_data = find.read_dat(dat)
+        RA = dat_data["RA"]
+        DEC = dat_data["DEC"]
+        MJD = dat_data["MJD"]
         
         # determine where to save new file
         checkpath = "%s_band_no_DC_spike"%GBT_band
@@ -87,7 +101,10 @@ def remove_spikes(dat_files, GBT_band):
         
         newpath = checkpath+"/"+old_dat+"new.dat"
         new_dat_files.append(newpath)
-    return new_dat_files
+        loc_dict = {"path":newpath, "RA":RA, "DEC":DEC, "MJD":MJD}
+        temp_loc_df = pd.DataFrame(loc_dict)
+        loc_df = loc_df.append(temp_loc_df, ignore_index=True)
+    return new_dat_files, loc_df
 
 def read_txt(text_file):
     """
@@ -231,16 +248,35 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
     return bin_edges, total/len(file_list)  
 
 
+def get_AltAz(loc_df, band, outdir="."):
+    targets = SkyCoord(loc_df["RA"].values, loc_df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(loc_df["MJD"].values, dtype=float), format="mjd") 
+    gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
+    gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
+    gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
+    ALT = gbt_target_altaz.alt
+    AZ = gbt_target_altaz.az
+    loc_df["ALT"] = ALT
+    loc_df["AZ"] = AZ
+
+    # GBT = Observer.at_site("GBT", timezone="US/Eastern")
+    # plot_sky(targets, GBT, times, style_kwargs={"c":"k"})
+    # plt.savefig(outdir + "/%s_band_GBT_alt_az.png"%band, bbox_inches="tight", transparent=False)
+    # plt.close()
+
+    return loc_df
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="directory .dat files are held in")
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
-    parser.add_argument("-DC", "-d", help="files contain DC spikes that need to be removed", action="store_true")
+    # parser.add_argument("-DC", "-d", help="files contain DC spikes that need to be removed", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
+    parser.add_argument("-altitude_bins", "-a", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", default=90)
     args = parser.parse_args()
     
     print("Gathering files...",end="")
@@ -251,17 +287,24 @@ if __name__ == "__main__":
     print("Done.")
     
     # check for argument to remove DC spikes
-    if args.DC:
-        print("Removing DC spikes...")
-        dat_files = remove_spikes(dat_files, args.band)
-        print("Done.")
+    # and identify the alt/az of the targets during observation
+    # if args.DC:
+    print("Removing DC spikes...")
+    dat_files, loc_df = remove_spikes(dat_files, args.band)
+
+    ## DEBUG::
+    import time
+    tstart = time.time()
+    loc_df = get_AltAz(loc_df, args.band, outdir=args.outdir)
+    print("Alt/Az conversion runtime: %s seconds"%(time.time() - tstart))
+    print("Done.")
     
     bin_edges, prob_hist = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)
     
     if args.save:
         print("Saving histogram data")
         to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
-        filename = "turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+        filename = args.outdir + "/turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
         with open(filename, "wb") as f:
             pickle.dump(to_save, f)
 
@@ -272,5 +315,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy: n=%s"%len(dat_files))
-    plt.savefig("%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

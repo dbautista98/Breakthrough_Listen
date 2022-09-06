@@ -686,6 +686,9 @@ def list_to_df(test_data_lst, band, outdir=""):
     hist_df : pandas.core.frame.DataFrame
         DataFrame containing the histogram of the hit distribuiton
         from the set of dat files
+    loc_df : pandas.core.frame.DataFrame
+        DataFrame containing the RA, DEC, and MJD of the observation
+        this can be used to calculate the pointing of the telescope
     """
     save_dats_to = outdir + "%s_band_no_DC_spike"%band
     check_dir(save_dats_to)
@@ -693,16 +696,29 @@ def list_to_df(test_data_lst, band, outdir=""):
     file_name = os.path.basename(test_data_lst[0])
 
     # remove DC spike channels and add first file histogram to dataframe
-    hist, bin_edges = so.calculate_hist(remove_DC_spikes(test_data_lst[0], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
+    no_DC_spikes = remove_DC_spikes(test_data_lst[0], GBT_band=band, outdir=save_dats_to)
+    RA = no_DC_spikes["RA"]
+    DEC = no_DC_spikes["DEC"]
+    MJD = no_DC_spikes["MJD"]
+    hist, bin_edges = so.calculate_hist(no_DC_spikes, band, bin_width=1)
     temp_dict = {"filename":file_name}
     for i in range(len(hist)):
         temp_dict[bin_edges[i]] = hist[i]
     df = df.append(temp_dict, ignore_index=True)
+    loc_dict = {"filename":file_name, "RA":RA, "DEC":DEC, "MJD":MJD}
+    loc_df = pd.DataFrame(loc_dict)
     
     # remove DC spike channels and add remaining histograms to dataframe
     for i in trange(len(test_data_lst)-1):
         file_name = os.path.basename(test_data_lst[i+1])
-        hist, edges = so.calculate_hist(remove_DC_spikes(test_data_lst[i+1], GBT_band=band, outdir=save_dats_to), band, bin_width=1)
+        no_DC_spikes = remove_DC_spikes(test_data_lst[i+1], GBT_band=band, outdir=save_dats_to)
+        RA = no_DC_spikes["RA"]
+        DEC = no_DC_spikes["DEC"]
+        MJD = no_DC_spikes["MJD"]
+        temp_loc_dict = {"filename":file_name, "RA":RA, "DEC":DEC, "MJD":MJD}
+        temp_loc_df = pd.DataFrame(temp_loc_dict)
+        loc_df = loc_df.append(temp_loc_df, ignore_index=True)
+        hist, edges = so.calculate_hist(no_DC_spikes, band, bin_width=1)
         temp_df = pd.DataFrame()
         temp_dict = {"filename":file_name}
         for j in range(len(hist)):
@@ -716,7 +732,7 @@ def list_to_df(test_data_lst, band, outdir=""):
     remove_statement = "rm -rf %s"%save_dats_to
     os.system(remove_statement)
 
-    return df
+    return df, loc_df
 
 def flag_z(test_df, historical_df, min_z):
     """
@@ -932,7 +948,7 @@ def RFI_check(test_df, out_dir, GBT_band, sigma_threshold=2, bad_file_threshold=
         exit()
 
     dat_list = glob.glob(test_df+"/*dat")
-    test_df = list_to_df(dat_list, GBT_band, outdir=out_dir)
+    test_df, test_loc_df = list_to_df(dat_list, GBT_band, outdir=out_dir)
 
     plt.figure(figsize=(6,6))
     bad_file_df = pd.DataFrame()

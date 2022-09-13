@@ -262,7 +262,7 @@ if __name__ == "__main__":
     if args.save:
         print("Saving histogram data")
         to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
-        filename = args.outdir + "turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+        filename = args.outdir + "/turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
         with open(filename, "wb") as f:
             pickle.dump(to_save, f)
 
@@ -273,5 +273,5 @@ if __name__ == "__main__":
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
     plt.title("Spectral Occupancy: n=%s"%len(dat_files))
-    plt.savefig("%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

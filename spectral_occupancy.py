@@ -178,24 +178,33 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
     """
     edges = []
     histograms = []
-    min_freq = 0
-    max_freq = 1e9
     
+    # collect spliced and unspliced observations
+    spliced_df, unspliced_df = spliced_unspliced_split(file_list)
+    unique_unspliced_observations = get_unique_observations(unspliced_df)
+
     print("Calculating histograms...",end="")
-    #calculate histogram for the .dat file and check the boundaries on the data
-    for file in file_list:
+    # calculate histograms for the spliced .dat files
+    for file in spliced_df["filepath"].values:
         hist, bin_edges = calculate_hist(file, GBT_band, bin_width)
-        if min(bin_edges) > min_freq:
-            min_freq = min(bin_edges)
-        if max(bin_edges) < max_freq:
-            max_freq = max(bin_edges)
-        edges.append(bin_edges)
+        histograms.append(hist)
+
+    # calculate the histograms for the unspliced .dat files
+    for obs in unique_unspliced_observations:
+        hist, bin_edges = calculate_hist(obs[0], GBT_band, bin_width)
+        for i in range(1, len(obs)):
+            temp_hist, bin_edges = calculate_hist(obs[i], GBT_band, bin_width)
+            hist += temp_hist
         histograms.append(hist)
     print("Done.")  
     
+    # define the upper and lower bounds of the band
+    min_freq = np.min(bin_edges)
+    max_freq = np.max(bin_edges)
+
     #create the dataframe and add the frequency bins to column 0
     df = pd.DataFrame()
-    df.insert(0, "freq", edges[0][:-1])
+    df.insert(0, "freq", bin_edges[:-1])
     
     #check if there is a hit in the frequency bin and insert value to dataframe
     for i in range(len(histograms)):
@@ -230,7 +239,70 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
     
     return bin_edges, total/len(file_list)  
 
+def spliced_unspliced_split(dat_files):
+    """
+    separates list of dat files into DataFrames of
+    spliced and unspliced dat files
 
+    Arguments
+    ----------
+    dat_files : list
+        list of filepaths to the dat files
+
+    Returns
+    --------
+    spliced_df : pandas.core.frame.DataFrame
+        DataFrame containing the filepaths of spliced dat files
+        column names: {"filepath", "MJD", "spliced"}
+    unspliced_df : pandas.core.frame.DataFrame
+        DataFrame containing the filepaths of unspliced dat files
+        column names: {"filepath", "MJD", "spliced"}
+    """
+    times = []
+    spliced = []
+    for i in range(len(dat_files)):
+        filename = os.path.split(dat_files[i])[1]
+        if filename.find("spliced") == -1:
+            spliced.append(False)
+            chopped = filename.split("_")
+            times.append(float(chopped[2] + "." + chopped[3]))
+        else:
+            spliced.append(True)
+            chopped = filename.split("_")
+            times.append(float(chopped[3] + "." + chopped[4]))
+    df =  pd.DataFrame({"filepath":dat_files, "MJD":times, "spliced":spliced})
+
+    return df[df["spliced"] == True], df[df["spliced"] == False]
+
+def get_unique_observations(df):
+    """
+    Identifies the unique files corresponding to an observation
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing filepaths to .dat files 
+        from many observations or compute nodes
+
+    Returns
+    --------
+    unique_observations : list
+        A list in which each entry is a list containing the filepaths of the 
+        dat files that make up that observation
+    """
+    unique_times = np.unique(df["MJD"])
+    unique_observations = []
+    for i in range(len(unique_times)):
+        temp_df = df[df["MJD"] == unique_times[i]]
+        unique_names = []
+        unique_paths = []
+        for j in range(len(temp_df)):
+            name = os.path.split(temp_df.iloc[j]["filepath"])[1]
+            if name not in unique_names:
+                unique_names.append(name)
+                unique_paths.append(temp_df.iloc[j]["filepath"])
+        unique_observations.append(unique_paths)
+    return unique_observations
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

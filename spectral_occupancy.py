@@ -236,6 +236,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="directory .dat files are held in")
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
@@ -261,7 +262,7 @@ if __name__ == "__main__":
     if args.save:
         print("Saving histogram data")
         to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
-        filename = "turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+        filename = args.outdir + "turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
         with open(filename, "wb") as f:
             pickle.dump(to_save, f)
 

@@ -153,7 +153,10 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         min_freq = 7800
         max_freq = 11201
     bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width) , endpoint=True)
-    hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
+    if len(tbl) == 0:
+        hist, bin_edges = np.histogram([], bins=bins)
+    else:
+        hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges
 
 def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):

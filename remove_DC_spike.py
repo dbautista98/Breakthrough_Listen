@@ -50,7 +50,6 @@ def grab_parameters(dat_file, GBT_band):
     
     nfpc=(1500.0/512.0)/abs(foff)
     
-    # num_course_channels = int(fch1 - np.min(tbl["Freq"]))/2.5 # slightly more than the number of coarse channels to ensure that all low frequency spikes get removed
     return fch1, foff, nfpc, num_course_channels
 
 def spike_channels(num_course_channels, nfpc):

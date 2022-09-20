@@ -35,18 +35,18 @@ def grab_parameters(dat_file, GBT_band):
         tbl = dat_file
     
     if GBT_band == "L":
-        fch1 = 1926.2695326677515 # LBAND  --  this is hardcoded, it would be nice to fix that
+        fch1 = 2251.46484375 # LBAND  --  based on the fch1 values from Table 6 of Lebofsky et al 2019
     if GBT_band == "C":
-        fch1 = 8201.66015625 # CBAND                           ""
+        fch1 = 8438.96484375 # CBAND                           ""
     if GBT_band == "S":
-        fch1 = 2720.80078125 # SBAND                           ""
+        fch1 = 3151.46484375 # SBAND                           ""
     if GBT_band == "X":
-        fch1 = 11102.05078125 # XBAND                          ""
+        fch1 = 11251.46484375 # XBAND                          ""
     foff = float(tbl["DELTAF"][0])*1e-6 
     
     nfpc=(1500.0/512.0)/abs(foff)
     
-    num_course_channels = np.max(tbl["CoarseChanNum"])
+    num_course_channels = int(fch1 - np.min(tbl["Freq"]))/2.5 # slightly more than the number of coarse channels to ensure that all low frequency spikes get removed
     return fch1, foff, nfpc, num_course_channels
 
 def spike_channels(num_course_channels, nfpc):

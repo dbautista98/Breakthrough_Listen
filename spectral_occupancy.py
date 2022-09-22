@@ -240,7 +240,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
     for label in data_labels:
         total = total + df[label].values
     
-    return bin_edges, total/len(file_list)  
+    return bin_edges, total/len(histograms), len(histograms)
 
 def spliced_unspliced_split(dat_files):
     """
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         dat_files = remove_spikes(dat_files, args.band)
         print("Done.")
     
-    bin_edges, prob_hist = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)
+    bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)
     
     if args.save:
         print("Saving histogram data")
@@ -347,6 +347,6 @@ if __name__ == "__main__":
     plt.bar(bin_edges[:-1], prob_hist, width=width)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
-    plt.title("Spectral Occupancy: n=%s"%len(dat_files))
+    plt.title("Spectral Occupancy: n=%s"%n_observations)
     plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

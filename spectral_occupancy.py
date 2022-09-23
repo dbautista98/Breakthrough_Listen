@@ -178,6 +178,16 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
         only L and S band have notch filters
     bin_width : float
         width of the hisrogram bins in MHz
+
+    Returns
+    --------
+    bin_edges : numpy.ndarray
+        the edge values of each bin. Has length Nbins+1
+    occupancy : numpy.ndarray
+        The spectral occupancy, defined as the fraction of observations
+        in which at least one high SNR signal was detected by turboSETI
+    n_observations : int
+        The number of observations in the dataset
     """
     edges = []
     histograms = []
@@ -194,9 +204,10 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
 
     # calculate the histograms for the unspliced .dat files
     for obs in unique_unspliced_observations:
-        hist, bin_edges = calculate_hist(obs[0], GBT_band, bin_width)
-        for i in range(1, len(obs)):
-            temp_hist, bin_edges = calculate_hist(obs[i], GBT_band, bin_width)
+        good_nodes = getGoodNodes(obs, GBT_band)
+        hist, bin_edges = calculate_hist(good_nodes[0], GBT_band, bin_width)
+        for i in range(1, len(good_nodes)):
+            temp_hist, bin_edges = calculate_hist(good_nodes[i], GBT_band, bin_width)
             hist += temp_hist
         histograms.append(hist)
     print("Done.")  
@@ -306,6 +317,61 @@ def get_unique_observations(df):
                 unique_paths.append(temp_df.iloc[j]["filepath"])
         unique_observations.append(unique_paths)
     return unique_observations
+
+def getGoodNodes(datfiles, band):
+    """
+    Credit to Noah Franz for writing this 
+    algorithm in https://github.com/noahfranz13/BL-TESSsearch/blob/main/analysis/hit_analysis.ipynb
+
+    Selects the nodes that will be used for analysis, and discards
+    the overlap nodes
+
+    Arguments
+    ----------
+    datfiles : list
+        A list of the filepaths of unspliced dat files from a single observation
+    band : str
+        The observing band from Green Bank Telescope. Either {"L", "S", "C", "X"}
+
+    Returns
+    --------
+    datfiles : list
+        A list of the filepaths of unspliced dat files 
+        that will be included in analysis, without the overlap nodes
+    """
+    datfiles = np.array(datfiles)
+    if os.path.split(datfiles[0])[1].find('spliced') == -1:
+        nodes = np.array([os.path.split(file)[1][:5] for file in datfiles])
+        if band == 'S' or band == 'L':
+            return datfiles
+        else:
+            if band == 'C':
+                if len(nodes) == 32:
+                    uqnodes = sorted(np.unique(nodes))
+                    nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16], uqnodes[23], uqnodes[24]]
+                    i_to_rm = []
+                    for node in nodes_to_rm:
+                        whereNodes = np.where(node == nodes)[0]
+                        i_to_rm.append(whereNodes)
+                    i_to_rm = np.array(i_to_rm).flatten()
+                    return np.delete(datfiles, i_to_rm)
+                else:
+                    raise ValueError(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
+            if band == 'X':
+                if len(nodes) == 24:
+                    uqnodes = sorted(np.unique(nodes))
+                    nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16]]
+                    i_to_rm = []
+                    for node in nodes_to_rm:
+                        whereNodes = np.where(node == nodes)[0]
+                        i_to_rm.append(whereNodes)
+                    i_to_rm = np.array(i_to_rm).flatten()
+                    return np.delete(datfiles, i_to_rm)
+                else:
+                    raise ValueError(f'There are {len(nodes)} nodes, not 24 as X-Band requires')
+    else:
+        print('This file is already spliced, returning all files')
+        return datfiles
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

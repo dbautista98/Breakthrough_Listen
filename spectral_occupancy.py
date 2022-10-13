@@ -41,7 +41,7 @@ def band_edges(GBT_band):
         max_freq = 11200
     return min_freq, max_freq
 
-def remove_spikes(dat_files, GBT_band):
+def remove_spikes(dat_files, GBT_band, outdir="."):
     """
     Calls DC spike removal code on the list of 
     .dat files. Reads a .dat file and generates
@@ -77,7 +77,7 @@ def remove_spikes(dat_files, GBT_band):
         old_dat = os.path.basename(dat)
         
         # determine where to save new file
-        checkpath = "%s_band_no_DC_spike"%GBT_band
+        checkpath = outdir + "/%s_band_no_DC_spike"%GBT_band
         if os.path.isdir(checkpath):
             pass
         else:
@@ -85,7 +85,7 @@ def remove_spikes(dat_files, GBT_band):
         
         remove_DC_spike.remove_DC_spike(dat, checkpath, GBT_band)
         
-        newpath = checkpath+"/"+old_dat+"new.dat"
+        newpath = checkpath + "/" + old_dat + "new.dat"
         new_dat_files.append(newpath)
     return new_dat_files
 
@@ -395,7 +395,7 @@ if __name__ == "__main__":
     # check for argument to remove DC spikes
     if args.DC:
         print("Removing DC spikes...")
-        dat_files = remove_spikes(dat_files, args.band)
+        dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
         print("Done.")
     
     bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)

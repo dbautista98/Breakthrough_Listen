@@ -408,7 +408,7 @@ if __name__ == "__main__":
             pickle.dump(to_save, f)
 
     print("Saving plot...",end="")
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=(10,7))
     width = np.diff(bin_edges)[0]
     plt.bar(bin_edges[:-1], prob_hist, width=width)
     plt.xlabel("Frequency [Mhz]")

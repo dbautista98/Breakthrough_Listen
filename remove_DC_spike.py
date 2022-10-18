@@ -12,7 +12,26 @@ import time
 import turbo_seti.find_event as find
 import os
 from tqdm import trange
+
+def read_txt(text_file):
+    """
+    reads a text file with one filepath per
+    line and returns a python list where
+    each entry is a filepath
     
+    Arguments
+    ----------
+    text_file : str
+        A string indicating the location of the 
+        text file pointing to the dat files 
+    """
+    with open(text_file) as open_file:
+        lines = open_file.readlines()
+    
+    for i in range(len(lines)):
+        lines[i] = lines[i].replace("\n", "")
+    return lines
+
 def grab_parameters(dat_file, GBT_band):
     """
     takes dat file of GBT data and returns frequency parameters 
@@ -156,16 +175,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Takes a set of .dat files and produces a new set of .dat files that have the DC spike removed. The files will be saved to a new directory that is created in the same directory as the .dat files, called <band>_band_no_DC_spike")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("-folder", "-f", help="directory .dat files are held in")
+    parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
     args = parser.parse_args()
 
     # collect paths to .dat files
-    dat_files = glob.glob(args.folder+"/*.dat")
+    if args.t == None:
+        dat_files = glob.glob(args.folder+"/*.dat")
+    else:
+        dat_files = read_txt(args.t)
 
     # set the GBT band
     GBT_band = args.band
     
     # make a directory to store the .dats that have had the DC spike removed
-    checkpath = "%s_band_no_DC_spike"%args.band
+    checkpath = args.outdir + "/%s_band_no_DC_spike"%args.band
     if os.path.isdir(checkpath):
         pass
     else:

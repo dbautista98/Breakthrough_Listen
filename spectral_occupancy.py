@@ -276,18 +276,18 @@ def spliced_unspliced_split(dat_files):
     spliced = []
     for i in range(len(dat_files)):
         filename = os.path.split(dat_files[i])[1]
-        if filename.find("spliced") == -1:
-            spliced.append(False)
-            chopped = filename.split("_")
-            times.append(float(chopped[2] + "." + chopped[3]))
-        elif filename[:3] == "blc":
-            spliced.append(True)
-            chopped = filename.split("_")
-            times.append(float(chopped[3] + "." + chopped[4]))
-        else: # some files start with guppi_{numbers}_{numbers}*
+        if filename[:5] == "guppi": # some unspliced files start with guppi_{numbers}_{numbers}*
             spliced.append(False)
             chopped = filename.split("_")
             times.append(float(chopped[1] + "." + chopped[2])) 
+        elif filename.find("spliced") == -1: # these files are also not spliced
+            spliced.append(False)
+            chopped = filename.split("_")
+            times.append(float(chopped[2] + "." + chopped[3]))
+        else: # these are the spliced files 
+            spliced.append(True)
+            chopped = filename.split("_")
+            times.append(float(chopped[3] + "." + chopped[4]))
     df =  pd.DataFrame({"filepath":dat_files, "MJD":times, "spliced":spliced})
 
     return df[df["spliced"] == True], df[df["spliced"] == False]

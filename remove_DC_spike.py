@@ -50,6 +50,8 @@ def grab_parameters(dat_file, GBT_band):
     """
     if type(dat_file) != pandas.core.frame.DataFrame:
         tbl = find.read_dat(dat_file)
+        if len(tbl) == 0:
+            return -9999, -9999, -9999, -9999
     else:
         tbl = dat_file
     
@@ -166,6 +168,11 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         default is 512
     """
     fch1, foff, nfpc, num_course_channels = grab_parameters(dat_file, GBT_band)
+    if fch1 == -9999:
+        dat_name = os.path.basename(dat_file)
+        empty_dat_command = "cp %s %s"%(dat_file, outdir + dat_name + "new.dat")
+        os.system(empty_dat_command)
+        return
     spike_channels_list = spike_channels(num_course_channels, nfpc)
     freqs_fine_channels_list = freqs_fine_channels(spike_channels_list,fch1, foff)
     clean_one_dat(dat_file, outdir, freqs_fine_channels_list, foff)

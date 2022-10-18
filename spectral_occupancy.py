@@ -280,10 +280,14 @@ def spliced_unspliced_split(dat_files):
             spliced.append(False)
             chopped = filename.split("_")
             times.append(float(chopped[2] + "." + chopped[3]))
-        else:
+        elif filename[:3] == "blc":
             spliced.append(True)
             chopped = filename.split("_")
             times.append(float(chopped[3] + "." + chopped[4]))
+        else: # some files start with guppi_{numbers}_{numbers}*
+            spliced.append(False)
+            chopped = filename.split("_")
+            times.append(float(chopped[1] + "." + chopped[2])) 
     df =  pd.DataFrame({"filepath":dat_files, "MJD":times, "spliced":spliced})
 
     return df[df["spliced"] == True], df[df["spliced"] == False]

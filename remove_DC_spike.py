@@ -170,7 +170,7 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
     fch1, foff, nfpc, num_course_channels = grab_parameters(dat_file, GBT_band)
     if fch1 == -9999:
         dat_name = os.path.basename(dat_file)
-        empty_dat_command = "cp %s %s"%(dat_file, outdir + dat_name + "new.dat")
+        empty_dat_command = "cp %s %s"%(dat_file, outdir + "/" + dat_name + "new.dat")
         os.system(empty_dat_command)
         return
     spike_channels_list = spike_channels(num_course_channels, nfpc)

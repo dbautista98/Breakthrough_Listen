@@ -44,6 +44,9 @@ def grab_parameters(dat_file, GBT_band, outdir):
     GBT_band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
+    outdir : str
+        the filepath to where the csv containing the RA, 
+        DEC, MJD data will be saved
         
     Returns : fch1, foff, nfpc
     which will be used internally within remove_DC_spike

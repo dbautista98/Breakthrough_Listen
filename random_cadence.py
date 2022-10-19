@@ -1,5 +1,4 @@
 import glob
-from ssl import OP_NO_TLSv1_1
 import numpy as np
 import pickle
 import os

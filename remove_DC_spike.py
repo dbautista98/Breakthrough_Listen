@@ -12,7 +12,26 @@ import time
 import turbo_seti.find_event as find
 import os
 from tqdm import trange
+
+def read_txt(text_file):
+    """
+    reads a text file with one filepath per
+    line and returns a python list where
+    each entry is a filepath
     
+    Arguments
+    ----------
+    text_file : str
+        A string indicating the location of the 
+        text file pointing to the dat files 
+    """
+    with open(text_file) as open_file:
+        lines = open_file.readlines()
+    
+    for i in range(len(lines)):
+        lines[i] = lines[i].replace("\n", "")
+    return lines
+
 def grab_parameters(dat_file, GBT_band):
     """
     takes dat file of GBT data and returns frequency parameters 
@@ -31,22 +50,27 @@ def grab_parameters(dat_file, GBT_band):
     """
     if type(dat_file) != pandas.core.frame.DataFrame:
         tbl = find.read_dat(dat_file)
+        if len(tbl) == 0:
+            return -9999, -9999, -9999, -9999
     else:
         tbl = dat_file
     
     if GBT_band == "L":
-        fch1 = 1926.2695326677515 # LBAND  --  this is hardcoded, it would be nice to fix that
+        fch1 = 2251.46484375 # LBAND  --  based on the fch1 values from Table 6 of Lebofsky et al 2019
+        num_course_channels = 512
     if GBT_band == "C":
-        fch1 = 8201.66015625 # CBAND                           ""
+        fch1 = 8438.96484375 # CBAND                           ""
+        num_course_channels = 1664
     if GBT_band == "S":
-        fch1 = 2720.80078125 # SBAND                           ""
+        fch1 = 3151.46484375 # SBAND                           ""
+        num_course_channels = 512
     if GBT_band == "X":
-        fch1 = 11102.05078125 # XBAND                          ""
+        fch1 = 11251.46484375 # XBAND                          ""
+        num_course_channels = 1280
     foff = float(tbl["DELTAF"][0])*1e-6 
     
     nfpc=(1500.0/512.0)/abs(foff)
     
-    num_course_channels = np.max(tbl["CoarseChanNum"])
     return fch1, foff, nfpc, num_course_channels
 
 def spike_channels(num_course_channels, nfpc):
@@ -144,6 +168,11 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         default is 512
     """
     fch1, foff, nfpc, num_course_channels = grab_parameters(dat_file, GBT_band)
+    if fch1 == -9999:
+        dat_name = os.path.basename(dat_file)
+        empty_dat_command = "cp %s %s"%(dat_file, outdir + "/" + dat_name + "new.dat")
+        os.system(empty_dat_command)
+        return
     spike_channels_list = spike_channels(num_course_channels, nfpc)
     freqs_fine_channels_list = freqs_fine_channels(spike_channels_list,fch1, foff)
     clean_one_dat(dat_file, outdir, freqs_fine_channels_list, foff)
@@ -153,16 +182,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Takes a set of .dat files and produces a new set of .dat files that have the DC spike removed. The files will be saved to a new directory that is created in the same directory as the .dat files, called <band>_band_no_DC_spike")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("-folder", "-f", help="directory .dat files are held in")
+    parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
     args = parser.parse_args()
 
     # collect paths to .dat files
-    dat_files = glob.glob(args.folder+"/*.dat")
+    if args.t == None:
+        dat_files = glob.glob(args.folder+"/*.dat")
+    else:
+        dat_files = read_txt(args.t)
 
     # set the GBT band
     GBT_band = args.band
     
     # make a directory to store the .dats that have had the DC spike removed
-    checkpath = "%s_band_no_DC_spike"%args.band
+    checkpath = args.outdir + "/%s_band_no_DC_spike"%args.band
     if os.path.isdir(checkpath):
         pass
     else:

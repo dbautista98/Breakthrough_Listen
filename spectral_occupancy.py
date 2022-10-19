@@ -47,7 +47,7 @@ def band_edges(GBT_band):
         max_freq = 11200
     return min_freq, max_freq
 
-def remove_spikes(dat_files, GBT_band):
+def remove_spikes(dat_files, GBT_band, outdir="."):
     """
     Calls DC spike removal code on the list of 
     .dat files. Reads a .dat file and generates
@@ -91,7 +91,7 @@ def remove_spikes(dat_files, GBT_band):
         MJD = dat_data["MJD"]
         
         # determine where to save new file
-        checkpath = "%s_band_no_DC_spike"%GBT_band
+        checkpath = outdir + "/%s_band_no_DC_spike"%GBT_band
         if os.path.isdir(checkpath):
             pass
         else:
@@ -99,7 +99,7 @@ def remove_spikes(dat_files, GBT_band):
         
         remove_DC_spike.remove_DC_spike(dat, checkpath, GBT_band)
         
-        newpath = checkpath+"/"+old_dat+"new.dat"
+        newpath = checkpath + "/" + old_dat + "new.dat"
         new_dat_files.append(newpath)
         loc_dict = {"path":newpath, "RA":RA, "DEC":DEC, "MJD":MJD}
         temp_loc_df = pd.DataFrame(loc_dict)
@@ -170,10 +170,13 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         min_freq = 7800
         max_freq = 11201
     bins = np.arange(min_freq, max_freq+0.5*bin_width, bin_width)#np.linspace(min_freq, max_freq, int((max_freq-min_freq)/bin_width) , endpoint=True)
-    hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
+    if len(tbl) == 0:
+        hist, bin_edges = np.histogram([], bins=bins)
+    else:
+        hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges
 
-def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
+def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir="."):
     """
     Takes in a list of .dat files and makes a true/false table of hits in a frequency bin
     
@@ -192,27 +195,50 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
         only L and S band have notch filters
     bin_width : float
         width of the hisrogram bins in MHz
+
+    Returns
+    --------
+    bin_edges : numpy.ndarray
+        the edge values of each bin. Has length Nbins+1
+    occupancy : numpy.ndarray
+        The spectral occupancy, defined as the fraction of observations
+        in which at least one high SNR signal was detected by turboSETI
+    n_observations : int
+        The number of observations in the dataset
     """
     edges = []
     histograms = []
-    min_freq = 0
-    max_freq = 1e9
     
+    # collect spliced and unspliced observations
+    spliced_df, unspliced_df = spliced_unspliced_split(file_list)
+    unique_unspliced_observations = get_unique_observations(unspliced_df)
+
     print("Calculating histograms...",end="")
-    #calculate histogram for the .dat file and check the boundaries on the data
-    for file in file_list:
+    # calculate histograms for the spliced .dat files
+    for file in spliced_df["filepath"].values:
         hist, bin_edges = calculate_hist(file, GBT_band, bin_width)
-        if min(bin_edges) > min_freq:
-            min_freq = min(bin_edges)
-        if max(bin_edges) < max_freq:
-            max_freq = max(bin_edges)
-        edges.append(bin_edges)
+        histograms.append(hist)
+
+    # calculate the histograms for the unspliced .dat files
+    bad_cadence_flag = False
+    for obs in unique_unspliced_observations:
+        good_nodes, bad_cadence_flag = getGoodNodes(obs, GBT_band, bad_cadence_flag, outdir=outdir)
+        if type(good_nodes) == int:
+            continue
+        hist, bin_edges = calculate_hist(good_nodes[0], GBT_band, bin_width)
+        for i in range(1, len(good_nodes)):
+            temp_hist, bin_edges = calculate_hist(good_nodes[i], GBT_band, bin_width)
+            hist += temp_hist
         histograms.append(hist)
     print("Done.")  
     
+    # define the upper and lower bounds of the band
+    min_freq = np.min(bin_edges)
+    max_freq = np.max(bin_edges)
+
     #create the dataframe and add the frequency bins to column 0
     df = pd.DataFrame()
-    df.insert(0, "freq", edges[0][:-1])
+    df.insert(0, "freq", bin_edges[:-1])
     
     #check if there is a hit in the frequency bin and insert value to dataframe
     for i in range(len(histograms)):
@@ -245,8 +271,101 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1):
     for label in data_labels:
         total = total + df[label].values
     
-    return bin_edges, total/len(file_list)  
+    return bin_edges, total/len(histograms), len(histograms)
 
+def spliced_unspliced_split(dat_files):
+    """
+    separates list of dat files into DataFrames of
+    spliced and unspliced dat files
+
+    Arguments
+    ----------
+    dat_files : list
+        list of filepaths to the dat files
+
+    Returns
+    --------
+    spliced_df : pandas.core.frame.DataFrame
+        DataFrame containing the filepaths of spliced dat files
+        column names: {"filepath", "MJD", "spliced"}
+    unspliced_df : pandas.core.frame.DataFrame
+        DataFrame containing the filepaths of unspliced dat files
+        column names: {"filepath", "MJD", "spliced"}
+    """
+    times = []
+    spliced = []
+    for i in range(len(dat_files)):
+        filename = os.path.split(dat_files[i])[1]
+        if filename[:5] == "guppi": # some unspliced files start with guppi_{numbers}_{numbers}*
+            spliced.append(False)
+            chopped = filename.split("_")
+            times.append(float(chopped[1] + "." + chopped[2])) 
+        elif filename.find("spliced") == -1: # these files are also not spliced
+            spliced.append(False)
+            chopped = filename.split("_")
+            times.append(float(chopped[2] + "." + chopped[3]))
+        else: # these are the spliced files 
+            spliced.append(True)
+            chopped = filename.split("_")
+            times.append(float(chopped[3] + "." + chopped[4]))
+    df =  pd.DataFrame({"filepath":dat_files, "MJD":times, "spliced":spliced})
+
+    return df[df["spliced"] == True], df[df["spliced"] == False]
+
+def get_unique_observations(df):
+    """
+    Identifies the unique files corresponding to an observation
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing filepaths to .dat files 
+        from many observations or compute nodes
+
+    Returns
+    --------
+    unique_observations : list
+        A list in which each entry is a list containing the filepaths of the 
+        dat files that make up that observation
+    """
+    unique_times = np.unique(df["MJD"])
+    unique_observations = []
+    for i in range(len(unique_times)):
+        temp_df = df[df["MJD"] == unique_times[i]]
+        unique_names = []
+        unique_paths = []
+        for j in range(len(temp_df)):
+            name = os.path.split(temp_df.iloc[j]["filepath"])[1]
+            if name not in unique_names:
+                unique_names.append(name)
+                unique_paths.append(temp_df.iloc[j]["filepath"])
+        unique_observations.append(unique_paths)
+    return unique_observations
+
+def record_bad_cadence(first_dat, band, nodes, outdir, alread_called):
+    print("bad cadence")
+    print("recording to: " + outdir + "/%sband_bad_cadences.txt"%band)
+    uqnodes = sorted(np.unique(nodes))
+    with open(outdir + "/%sband_bad_cadences.csv"%band.lower(), "a") as f:
+        if not alread_called:
+            # write csv header
+            f.write("target,n_nodes,nodes_present\n") # csv header
+        
+        # get target name
+        filename = os.path.basename(first_dat)
+        if filename[:5] == "guppi":
+            target = filename.split("_")[3]
+        else:
+            target = filename.split("_")[4]
+        f.write(target + ",")
+
+        # number of nodes present
+        f.write(str(len(nodes)) + ",")
+
+        # write nodes present
+        for i in range(len(uqnodes)):
+            f.write(uqnodes[i] + " ")
+        f.write("\n")
 
 def get_AltAz(loc_df, band, outdir="."):
     targets = SkyCoord(loc_df["RA"].values, loc_df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
@@ -265,6 +384,76 @@ def get_AltAz(loc_df, band, outdir="."):
     # plt.close()
 
     return loc_df
+    
+def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
+    """
+    Credit to Noah Franz for writing this 
+    algorithm in https://github.com/noahfranz13/BL-TESSsearch/blob/main/analysis/hit_analysis.ipynb
+
+    Selects the nodes that will be used for analysis, and discards
+    the overlap nodes
+
+    Arguments
+    ----------
+    datfiles : list
+        A list of the filepaths of unspliced dat files from a single observation
+    band : str
+        The observing band from Green Bank Telescope. Either {"L", "S", "C", "X"}
+    outdir : str
+        directory where the problematic cadences are saved
+
+    Returns
+    --------
+    datfiles : list
+        A list of the filepaths of unspliced dat files 
+        that will be included in analysis, without the overlap nodes
+    """
+    datfiles = np.array(datfiles)
+    if os.path.split(datfiles[0])[1].find('spliced') == -1:
+        nodes = np.array([os.path.split(file)[1][:5] for file in datfiles])
+        if band == 'S' or band == 'L':
+            # check if the files have 8 nodes
+            if len(nodes) == 8:
+                return datfiles, bad_cadence_flag
+            else:
+                print(f'There are {len(nodes)} nodes, not 8 as {band}-Band requires')
+                record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                bad_cadence_flag = True
+                return -9999, bad_cadence_flag
+        else:
+            if band == 'C':
+                if len(nodes) == 32:
+                    uqnodes = sorted(np.unique(nodes))
+                    nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16], uqnodes[23], uqnodes[24]]
+                    i_to_rm = []
+                    for node in nodes_to_rm:
+                        whereNodes = np.where(node == nodes)[0]
+                        i_to_rm.append(whereNodes)
+                    i_to_rm = np.array(i_to_rm).flatten()
+                    return np.delete(datfiles, i_to_rm), bad_cadence_flag
+                else:
+                    print(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    bad_cadence_flag = True
+                    return -9999, bad_cadence_flag
+            if band == 'X':
+                if len(nodes) == 24:
+                    uqnodes = sorted(np.unique(nodes))
+                    nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16]]
+                    i_to_rm = []
+                    for node in nodes_to_rm:
+                        whereNodes = np.where(node == nodes)[0]
+                        i_to_rm.append(whereNodes)
+                    i_to_rm = np.array(i_to_rm).flatten()
+                    return np.delete(datfiles, i_to_rm), bad_cadence_flag
+                else:
+                    print(f'There are {len(nodes)} nodes, not 24 as X-Band requires')
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    bad_cadence_flag = True
+                    return -9999, bad_cadence_flag
+    else:
+        print('This file is already spliced, returning all files')
+        return datfiles, bad_cadence_flag
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
@@ -298,8 +487,12 @@ if __name__ == "__main__":
     loc_df = get_AltAz(loc_df, args.band, outdir=args.outdir)
     print("Alt/Az conversion runtime: %s seconds"%(time.time() - tstart))
     print("Done.")
+    if args.DC:
+        print("Removing DC spikes...")
+        dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
+        print("Done.")
     
-    bin_edges, prob_hist = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter)
+    bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
     
     if args.save:
         print("Saving histogram data")
@@ -309,11 +502,11 @@ if __name__ == "__main__":
             pickle.dump(to_save, f)
 
     print("Saving plot...",end="")
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=(10,7))
     width = np.diff(bin_edges)[0]
     plt.bar(bin_edges[:-1], prob_hist, width=width)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
-    plt.title("Spectral Occupancy: n=%s"%len(dat_files))
+    plt.title("Spectral Occupancy: n=%s"%n_observations)
     plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

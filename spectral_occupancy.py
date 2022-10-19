@@ -366,24 +366,6 @@ def record_bad_cadence(first_dat, band, nodes, outdir, alread_called):
         for i in range(len(uqnodes)):
             f.write(uqnodes[i] + " ")
         f.write("\n")
-
-def get_AltAz(loc_df, band, outdir="."):
-    targets = SkyCoord(loc_df["RA"].values, loc_df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
-    times = Time(np.array(loc_df["MJD"].values, dtype=float), format="mjd") 
-    gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
-    gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
-    gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
-    ALT = gbt_target_altaz.alt
-    AZ = gbt_target_altaz.az
-    loc_df["ALT"] = ALT
-    loc_df["AZ"] = AZ
-
-    # GBT = Observer.at_site("GBT", timezone="US/Eastern")
-    # plot_sky(targets, GBT, times, style_kwargs={"c":"k"})
-    # plt.savefig(outdir + "/%s_band_GBT_alt_az.png"%band, bbox_inches="tight", transparent=False)
-    # plt.close()
-
-    return loc_df
     
 def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
     """
@@ -454,6 +436,24 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
     else:
         print('This file is already spliced, returning all files')
         return datfiles, bad_cadence_flag
+
+def get_AltAz(loc_df, band, outdir="."):
+    targets = SkyCoord(loc_df["RA"].values, loc_df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(loc_df["MJD"].values, dtype=float), format="mjd") 
+    gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
+    gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
+    gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
+    ALT = gbt_target_altaz.alt
+    AZ = gbt_target_altaz.az
+    loc_df["ALT"] = ALT
+    loc_df["AZ"] = AZ
+
+    # GBT = Observer.at_site("GBT", timezone="US/Eastern")
+    # plot_sky(targets, GBT, times, style_kwargs={"c":"k"})
+    # plt.savefig(outdir + "/%s_band_GBT_alt_az.png"%band, bbox_inches="tight", transparent=False)
+    # plt.close()
+
+    return loc_df
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

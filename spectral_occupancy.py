@@ -69,19 +69,30 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
     import remove_DC_spike
     
     new_dat_files = []
+
+    # determine where to save new file
+    checkpath = outdir + "/%s_band_no_DC_spike"%GBT_band
+    if os.path.isdir(checkpath):
+        pass
+    else:
+        os.mkdir(checkpath)
+
+    # check if any of the files have been cleaned already
+    to_clean = []
+    for i in range(len(dat_files)):
+        one_dat = os.path.basename(dat_files[0]) + "new.dat"
+        one_path = checkpath + "/" + one_dat
+        if not os.path.exists(one_path):
+            to_clean.append(dat_files[0])
+        else:
+            new_dat_files.append(one_path)
+
     
     for i in trange(len(dat_files)):
         #get the path
         dat = dat_files[i]
         path = os.path.dirname(dat)
         old_dat = os.path.basename(dat)
-        
-        # determine where to save new file
-        checkpath = outdir + "/%s_band_no_DC_spike"%GBT_band
-        if os.path.isdir(checkpath):
-            pass
-        else:
-            os.mkdir(checkpath)
         
         remove_DC_spike.remove_DC_spike(dat, checkpath, GBT_band)
         
@@ -326,21 +337,33 @@ def get_unique_observations(df):
     return unique_observations
 
 def record_bad_cadence(first_dat, band, nodes, outdir, alread_called):
+    csv_path = outdir + "/%sband_bad_cadences.csv"%band.lower()
     print("bad cadence")
-    print("recording to: " + outdir + "/%sband_bad_cadences.txt"%band)
+    print("recording to: " + csv_path)
     uqnodes = sorted(np.unique(nodes))
-    with open(outdir + "/%sband_bad_cadences.csv"%band.lower(), "a") as f:
-        if not alread_called:
+    if not alread_called: # start new csv file
+        with open(csv_path, "w") as f:
             # write csv header
             f.write("target,n_nodes,nodes_present\n") # csv header
-        
+    
+    # write the rest of the data
+    with open(csv_path, "a") as f:
         # get target name
         filename = os.path.basename(first_dat)
         if filename[:5] == "guppi":
             target = filename.split("_")[3]
+            index = 3
         else:
             target = filename.split("_")[4]
-        f.write(target + ",")
+            index = 4
+        # handle edge cases (:(
+        if target.upper() == "AND":
+            target = filename.split("_")[index] + "_" + filename.split("_")[index + 1]
+        if target.upper() == "LGS":
+            target = filename.split("_")[index] + filename.split("_")[index + 1]
+        if target.upper() == "SAG":
+            target = filename.split("_")[index] + filename.split("_")[index + 1]
+        f.write(target.upper() + ",")
 
         # number of nodes present
         f.write(str(len(nodes)) + ",")
@@ -424,7 +447,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("folder", help="directory .dat files are held in")
-    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=os.getcwd())
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")

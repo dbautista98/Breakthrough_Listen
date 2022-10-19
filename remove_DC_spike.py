@@ -183,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("-folder", "-f", help="directory .dat files are held in")
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
-    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=".")
+    parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=os.getcwd())
     args = parser.parse_args()
 
     # collect paths to .dat files
@@ -202,11 +202,21 @@ if __name__ == "__main__":
     else:
         os.mkdir(checkpath)
 
+    # check if any of the files have already been cleaned
+    to_clean = []
+    for i in range(len(dat_files)):
+        one_dat = os.path.basename(dat_files[0]) + "new.dat"
+        one_path = checkpath + "/" + one_dat
+        print(one_path)
+        print(os.path.exists(one_path))
+        if not os.path.exists(one_path):
+            to_clean.append(dat_files[0])
+
     print("Removing DC spikes...")
     start = time.time()
-    for i in trange(len(dat_files)):
-        remove_DC_spike(dat_files[i], checkpath, GBT_band)
+    for i in trange(len(to_clean)):
+        remove_DC_spike(to_clean[i], checkpath, GBT_band)
     end = time.time()
 
     print("All Done!")
-    print("It took %s seconds to remove DC spikes from %s files"%(end - start, len(dat_files)))
+    print("It took %s seconds to remove DC spikes from %s files"%(end - start, len(to_clean)))

@@ -71,9 +71,6 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
     new_dat_files : lst
         a python list of the filepaths to the new
         .dat files which no longer contain DC spikes
-    loc_df : pandas.core.frame.DataFrame
-        DataFrame containing the RA, DEC, and MJD of the observation
-        this can be used to calculate the pointing of the telescope
     """
     import remove_DC_spike
     
@@ -100,21 +97,13 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
     for i in trange(len(dat_files)):
         #get the path
         dat = dat_files[i]
-        path = os.path.dirname(dat)
         old_dat = os.path.basename(dat)
-        dat_data = find.read_dat(dat)
-        RA = dat_data["RA"]
-        DEC = dat_data["DEC"]
-        MJD = dat_data["MJD"]
         
         remove_DC_spike.remove_DC_spike(dat, checkpath, GBT_band)
         
         newpath = checkpath + "/" + old_dat + "new.dat"
         new_dat_files.append(newpath)
-        loc_dict = {"path":newpath, "RA":RA, "DEC":DEC, "MJD":MJD}
-        temp_loc_df = pd.DataFrame(loc_dict)
-        loc_df = loc_df.append(temp_loc_df, ignore_index=True)
-    return new_dat_files, loc_df
+    return new_dat_files
 
 def read_txt(text_file):
     """
@@ -497,14 +486,17 @@ if __name__ == "__main__":
         dat_files = read_txt(args.t)
     print("Done.")
     
-    # check for argument to remove DC spikes
-    # and identify the alt/az of the targets during observation
+    # check to remove DC spikes
     # if args.DC:
-    print("Removing DC spikes...")
-    dat_files, loc_df = remove_spikes(dat_files, args.band)
+    if "%s_band_no_DC_spike"%args.band not in args.folder:
+        print("Removing DC spikes...")
+        dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
+        loc_df = pd.read_csv(args.outdir + "/%s_band_no_DC_spike/locations.csv"%args.band)
+    else:
+        loc_df = pd.read_csv(args.folder + "/locations.csv")
 
     ## DEBUG::
-    import time
+    """import time
     tstart = time.time()
     loc_df = get_AltAz(loc_df, args.band, outdir=args.outdir)
     print("Alt/Az conversion runtime: %s seconds"%(time.time() - tstart))
@@ -512,7 +504,7 @@ if __name__ == "__main__":
     if args.DC:
         print("Removing DC spikes...")
         dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
-        print("Done.")
+        print("Done.")"""
     
     bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
     

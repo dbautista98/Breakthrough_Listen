@@ -32,7 +32,7 @@ def read_txt(text_file):
         lines[i] = lines[i].replace("\n", "")
     return lines
 
-def grab_parameters(dat_file, GBT_band):
+def grab_parameters(dat_file, GBT_band, outdir):
     """
     takes dat file of GBT data and returns frequency parameters 
     used to calculate where the DC spikes will be 
@@ -50,10 +50,24 @@ def grab_parameters(dat_file, GBT_band):
     """
     if type(dat_file) != pandas.core.frame.DataFrame:
         tbl = find.read_dat(dat_file)
-        if len(tbl) == 0:
-            return -9999, -9999, -9999, -9999
     else:
         tbl = dat_file
+
+    if len(tbl) == 0: # return -9999 then the RA, DEC, MJD
+        with open(dat_file, "r") as f:
+            hits = f.readlines()
+        MJD = hits[4].strip().split('\t')[0].split(':')[-1].strip()
+        RA = hits[4].strip().split('\t')[1].split(':')[-1].strip()
+        DEC = hits[4].strip().split('\t')[2].split(':')[-1].strip()
+        with open(outdir + "/locations.csv", "a") as f:
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "\n")
+        return -9999, -9999, -9999, -9999
+    else:
+        RA = tbl["RA"].values[0]
+        DEC = tbl["DEC"].values[0]
+        MJD = tbl["MJD"].values[0]
+        with open(outdir + "/locations.csv", "a") as f:
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "\n")
     
     if GBT_band == "L":
         fch1 = 2251.46484375 # LBAND  --  based on the fch1 values from Table 6 of Lebofsky et al 2019
@@ -98,8 +112,7 @@ def clean_one_dat(datfile_curr, outpath, freqs_fine_channels_list, foff):
     and removes the DC spikes
     """
     # set the outdir to the no_DC_spike directory
-    split_file = datfile_curr.split("/")
-    dat_name = split_file[len(split_file)-1]
+    dat_name = os.path.basename(datfile_curr)
     output = outpath + "/" + dat_name + "new.dat"
     
     file_contents = []
@@ -167,7 +180,11 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         the number of course channels in a frequency band. The 
         default is 512
     """
-    fch1, foff, nfpc, num_course_channels = grab_parameters(dat_file, GBT_band)
+    csv_header = "RA,DEC,MJD\n"
+    if not os.path.exists(outdir + "/locations.csv"):
+        with open(outdir + "/locations.csv", "w") as f:
+            f.write(csv_header)
+    fch1, foff, nfpc, num_course_channels = grab_parameters(dat_file, GBT_band, outdir)
     if fch1 == -9999:
         dat_name = os.path.basename(dat_file)
         empty_dat_command = "cp %s %s"%(dat_file, outdir + "/" + dat_name + "new.dat")
@@ -205,12 +222,10 @@ if __name__ == "__main__":
     # check if any of the files have already been cleaned
     to_clean = []
     for i in range(len(dat_files)):
-        one_dat = os.path.basename(dat_files[0]) + "new.dat"
+        one_dat = os.path.basename(dat_files[i]) + "new.dat"
         one_path = checkpath + "/" + one_dat
-        print(one_path)
-        print(os.path.exists(one_path))
         if not os.path.exists(one_path):
-            to_clean.append(dat_files[0])
+            to_clean.append(dat_files[i])
 
     print("Removing DC spikes...")
     start = time.time()

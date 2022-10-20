@@ -254,12 +254,5 @@ if __name__ == "__main__":
         remove_DC_spike(to_clean[i], checkpath, GBT_band)
     end = time.time()
 
-    # save alt az data
-    # df = pd.read_csv(checkpath + "/locations.csv")
-    # alt, az = get_AltAz(df)
-    # df["altitude"] = alt
-    # df["azimuth"] = az
-    # df.to_csv(checkpath + "/locations.csv", index=False)
-
     print("All Done!")
     print("It took %s seconds to remove DC spikes from %s files"%(end - start, len(to_clean)))

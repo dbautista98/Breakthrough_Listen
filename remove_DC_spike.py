@@ -12,6 +12,9 @@ import time
 import turbo_seti.find_event as find
 import os
 from tqdm import trange
+from astropy import units as u
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+from astropy.time import Time
 
 def read_txt(text_file):
     """
@@ -56,21 +59,26 @@ def grab_parameters(dat_file, GBT_band, outdir):
     else:
         tbl = dat_file
 
+    dat_name = os.path.basename(dat_file)
+    filepath = outdir + "/" + dat_name + "new.dat"
+
     if len(tbl) == 0: # return -9999 then the RA, DEC, MJD
         with open(dat_file, "r") as f:
             hits = f.readlines()
         MJD = hits[4].strip().split('\t')[0].split(':')[-1].strip()
         RA = hits[4].strip().split('\t')[1].split(':')[-1].strip()
         DEC = hits[4].strip().split('\t')[2].split(':')[-1].strip()
+        alt, az = get_AltAz(RA, DEC, MJD)
         with open(outdir + "/locations.csv", "a") as f:
-            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "\n")
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + filepath + "\n")
         return -9999, -9999, -9999, -9999
     else:
         RA = tbl["RA"].values[0]
         DEC = tbl["DEC"].values[0]
         MJD = tbl["MJD"].values[0]
+        alt, az = get_AltAz(RA, DEC, MJD)
         with open(outdir + "/locations.csv", "a") as f:
-            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "\n")
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + filepath + "\n")
     
     if GBT_band == "L":
         fch1 = 2251.46484375 # LBAND  --  based on the fch1 values from Table 6 of Lebofsky et al 2019
@@ -183,7 +191,7 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         the number of course channels in a frequency band. The 
         default is 512
     """
-    csv_header = "RA,DEC,MJD\n"
+    csv_header = "RA,DEC,MJD,ALT,AZ,filepath\n"
     if not os.path.exists(outdir + "/locations.csv"):
         with open(outdir + "/locations.csv", "w") as f:
             f.write(csv_header)
@@ -197,7 +205,17 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
     freqs_fine_channels_list = freqs_fine_channels(spike_channels_list,fch1, foff)
     clean_one_dat(dat_file, outdir, freqs_fine_channels_list, foff)
                 
-                
+def get_AltAz(RA, DEC, MJD):
+    targets = SkyCoord(RA, DEC, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(MJD, dtype=float), format="mjd") 
+    gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
+    gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
+    gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
+    altitude = gbt_target_altaz.alt.deg
+    azimuth = gbt_target_altaz.az.deg
+
+    return altitude, azimuth
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Takes a set of .dat files and produces a new set of .dat files that have the DC spike removed. The files will be saved to a new directory that is created in the same directory as the .dat files, called <band>_band_no_DC_spike")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
@@ -235,6 +253,13 @@ if __name__ == "__main__":
     for i in trange(len(to_clean)):
         remove_DC_spike(to_clean[i], checkpath, GBT_band)
     end = time.time()
+
+    # save alt az data
+    # df = pd.read_csv(checkpath + "/locations.csv")
+    # alt, az = get_AltAz(df)
+    # df["altitude"] = alt
+    # df["azimuth"] = az
+    # df.to_csv(checkpath + "/locations.csv", index=False)
 
     print("All Done!")
     print("It took %s seconds to remove DC spikes from %s files"%(end - start, len(to_clean)))

@@ -448,23 +448,26 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
         print('This file is already spliced, returning all files')
         return datfiles, bad_cadence_flag
 
-def get_AltAz(loc_df, band, outdir="."):
-    targets = SkyCoord(loc_df["RA"].values, loc_df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
-    times = Time(np.array(loc_df["MJD"].values, dtype=float), format="mjd") 
+def plot_AltAz(df, band, outdir="."):
+    targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(df["MJD"].values, dtype=float), format="mjd")
+    GBT = Observer.at_site("GBT", timezone="US/Eastern")
+   
+    
+    plot_sky(targets, GBT, times, style_kwargs={"s":2})
+    plt.savefig(outdir + "/%s_band_GBT_alt_az.pdf"%band, bbox_inches="tight", transparent=False)
+    plt.close()
+
+def get_AltAz(df):
+    targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(df["MJD"].values, dtype=float), format="mjd") 
     gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
     gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
     gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
     ALT = gbt_target_altaz.alt
     AZ = gbt_target_altaz.az
-    loc_df["ALT"] = ALT
-    loc_df["AZ"] = AZ
 
-    # GBT = Observer.at_site("GBT", timezone="US/Eastern")
-    # plot_sky(targets, GBT, times, style_kwargs={"c":"k"})
-    # plt.savefig(outdir + "/%s_band_GBT_alt_az.png"%band, bbox_inches="tight", transparent=False)
-    # plt.close()
-
-    return loc_df
+    return ALT, AZ
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
@@ -476,7 +479,9 @@ if __name__ == "__main__":
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     # parser.add_argument("-DC", "-d", help="files contain DC spikes that need to be removed", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
-    parser.add_argument("-altitude_bins", "-a", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", default=90)
+    parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
+    parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
+    parser.add_argument("-time_bins", "-tb", help="size of time step the data will be broken up into ", default=None)
     args = parser.parse_args()
     
     print("Gathering files...",end="")
@@ -491,20 +496,12 @@ if __name__ == "__main__":
     if "%s_band_no_DC_spike"%args.band not in args.folder:
         print("Removing DC spikes...")
         dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
-        loc_df = pd.read_csv(args.outdir + "/%s_band_no_DC_spike/locations.csv"%args.band)
+        df = pd.read_csv(args.outdir + "/%s_band_no_DC_spike/locations.csv"%args.band)
     else:
-        loc_df = pd.read_csv(args.folder + "/locations.csv")
+        df = pd.read_csv(args.folder + "/locations.csv")
 
-    ## DEBUG::
-    """import time
-    tstart = time.time()
-    loc_df = get_AltAz(loc_df, args.band, outdir=args.outdir)
-    print("Alt/Az conversion runtime: %s seconds"%(time.time() - tstart))
-    print("Done.")
-    if args.DC:
-        print("Removing DC spikes...")
-        dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)
-        print("Done.")"""
+    alt, az = get_AltAz(df) # read this from csv
+    plot_AltAz(df, args.band, outdir=args.outdir)
     
     bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
     

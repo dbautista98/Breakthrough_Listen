@@ -530,6 +530,7 @@ def plot_heatmap(hist, band, outdir="."):
 
         n_ticks = 11
 
+        freqs = np.arange(1800, 2800.1)
         ticks = np.arange(1800, 2800.1, 100)
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
@@ -542,6 +543,7 @@ def plot_heatmap(hist, band, outdir="."):
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
         plt.colorbar(label="hit count")
 
+        freqs = np.arange(4000, 7800.1)
         ticks = np.asarray([4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 7800])
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
@@ -554,6 +556,7 @@ def plot_heatmap(hist, band, outdir="."):
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
         plt.colorbar(label="hit count")
 
+        freqs = np.arange(7800, 11200.1)
         ticks = np.append(np.arange(7800, 11200.1, 500), 11200)
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
@@ -610,6 +613,6 @@ if __name__ == "__main__":
     plt.bar(bin_edges[:-1], prob_hist, width=width)
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
-    plt.title("Spectral Occupancy: n=%s"%n_observations)
+    plt.title("Spectral Occupancy: n=%s observations"%n_observations)
     plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
     print("Done")

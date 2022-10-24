@@ -230,6 +230,9 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
             hist += temp_hist
         histograms.append(hist)
     print("Done.")  
+
+    # plot heatmap
+    plot_heatmap(histograms, GBT_band, outdir=outdir)
     
     # define the upper and lower bounds of the band
     min_freq = np.min(bin_edges)
@@ -502,6 +505,61 @@ def get_AltAz(df):
     AZ = gbt_target_altaz.az
 
     return ALT, AZ
+
+def plot_heatmap(hist, band, outdir="."):
+    if band == "L":
+        plt.figure(figsize=(15,3))
+        plt.imshow(hist, cmap="viridis_r", aspect="auto")
+        plt.colorbar(label="hit count")
+
+        n_ticks = 9
+
+        freqs = np.arange(1100, 1900.1)
+        # ticks = np.linspace(1100, 1900, num=n_ticks)
+        ticks = np.asarray([1100, 1200, 1300, 1380, 1420, 1500, 1600, 1700, 1800, 1900])
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
+        plt.xlabel("Frequency [MHz]")
+        plt.title("L band hit counts")
+        plt.savefig(outdir + "/L_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+    
+    if band ==  "S":
+        plt.figure(figsize=(15,3))
+        plt.imshow(hist, cmap="viridis_r", aspect="auto")
+        plt.colorbar(label="hit count")
+
+        n_ticks = 11
+
+        ticks = np.arange(1800, 2800.1, 100)
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
+        plt.xlabel("Frequency [MHz]")
+        plt.title("S band hit counts")
+        plt.savefig(outdir + "/S_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+    
+    if band == "C":
+        plt.figure(figsize=(15,3))
+        plt.imshow(hist, cmap="viridis_r", aspect="auto")
+        plt.colorbar(label="hit count")
+
+        ticks = np.asarray([4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 7800])
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
+        plt.xlabel("Frequency [MHz]")
+        plt.title("C band hit counts")
+        plt.savefig(outdir + "/C_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+    
+    if band == "X":
+        plt.figure(figsize=(15,3))
+        plt.imshow(hist, cmap="viridis_r", aspect="auto")
+        plt.colorbar(label="hit count")
+
+        ticks = np.append(np.arange(7800, 11200.1, 500), 11200)
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
+        plt.xlabel("Frequency [MHz]")
+        plt.title("X band hit counts")
+        plt.savefig(outdir + "/X_band_heatmap.pdf", bbox_inches="tight", transparent=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

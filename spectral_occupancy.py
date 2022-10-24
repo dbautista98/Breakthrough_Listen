@@ -410,6 +410,15 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
         A flag aboout whether there has already been a bad cadence
         flagged in the dataset
     """
+    def rm_nodes(nodes_to_rm, nodes):
+        i_to_rm = []
+        for node in nodes_to_rm:
+            whereNodes = np.where(node == nodes)[0]
+            i_to_rm.append(whereNodes)
+        i_to_rm = np.array(i_to_rm).flatten()
+        return i_to_rm
+
+
     datfiles = np.array(datfiles)
     if os.path.split(datfiles[0])[1].find('spliced') == -1:
         nodes = np.array([os.path.split(file)[1][:5] for file in datfiles])
@@ -431,7 +440,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag 
-        if band == 'S':
+        elif band == 'S':
             # check if the files have 8 nodes
             if len(nodes) == 8:
                 return datfiles, bad_cadence_flag
@@ -450,37 +459,50 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
-        else:
-            if band == 'C':
-                if len(nodes) == 32:
-                    uqnodes = sorted(np.unique(nodes))
-                    nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16], uqnodes[23], uqnodes[24]]
-                    i_to_rm = []
-                    for node in nodes_to_rm:
-                        whereNodes = np.where(node == nodes)[0]
-                        i_to_rm.append(whereNodes)
-                    i_to_rm = np.array(i_to_rm).flatten()
+        elif band == 'C':
+            if len(nodes) == 32:
+                uqnodes = sorted(np.unique(nodes))
+                nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16], uqnodes[23], uqnodes[24]]
+                i_to_rm = rm_nodes(nodes_to_rm, nodes)
+                return np.delete(datfiles, i_to_rm), bad_cadence_flag
+            else:
+                # get node numbers
+                uqnodes = sorted(np.unique(nodes))
+                node_string = ""
+                for i in range(len(uqnodes)):
+                    node_string = node_string + uqnodes[i][-1]
+                if node_string == "12345670123456701234567012345":
+                    nodes_to_rm = [uqnodes[6], uqnodes[7], uqnodes[14], uqnodes[15], uqnodes[22], uqnodes[23]]
+                    i_to_rm = rm_nodes(nodes_to_rm, nodes)
                     return np.delete(datfiles, i_to_rm), bad_cadence_flag
                 else:
                     print(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
                     record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
-            if band == 'X':
-                if len(nodes) == 24:
-                    uqnodes = sorted(np.unique(nodes))
+        elif band == 'X':
+            if len(nodes) == 24:
+                uqnodes = sorted(np.unique(nodes))
+                nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16]]
+                i_to_rm = rm_nodes(nodes_to_rm, nodes)
+                return np.delete(datfiles, i_to_rm), bad_cadence_flag
+            else:
+                # get node numbers
+                uqnodes = sorted(np.unique(nodes))
+                node_string = ""
+                for i in range(len(uqnodes)):
+                    node_string = node_string + uqnodes[i][-1]
+                if node_string == "01234567012345670123456":
                     nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16]]
-                    i_to_rm = []
-                    for node in nodes_to_rm:
-                        whereNodes = np.where(node == nodes)[0]
-                        i_to_rm.append(whereNodes)
-                    i_to_rm = np.array(i_to_rm).flatten()
+                    i_to_rm = rm_nodes(nodes_to_rm, nodes)
                     return np.delete(datfiles, i_to_rm), bad_cadence_flag
                 else:
-                    print(f'There are {len(nodes)} nodes, not 24 as X-Band requires')
+                    print(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
                     record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
+        else:
+            raise ValueError(f'{band}-Band is not a valid band')
     else:
         print('This file is already spliced, returning all files')
         return datfiles, bad_cadence_flag
@@ -517,7 +539,7 @@ def plot_heatmap(hist, band, outdir="."):
         freqs = np.arange(1100, 1900.1)
         # ticks = np.linspace(1100, 1900, num=n_ticks)
         ticks = np.asarray([1100, 1200, 1300, 1380, 1420, 1500, 1600, 1700, 1800, 1900])
-        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
         plt.title("L band hit counts")
@@ -532,7 +554,7 @@ def plot_heatmap(hist, band, outdir="."):
 
         freqs = np.arange(1800, 2800.1)
         ticks = np.arange(1800, 2800.1, 100)
-        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
         plt.title("S band hit counts")
@@ -545,7 +567,7 @@ def plot_heatmap(hist, band, outdir="."):
 
         freqs = np.arange(4000, 7800.1)
         ticks = np.asarray([4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 7800])
-        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
         plt.title("C band hit counts")
@@ -558,7 +580,7 @@ def plot_heatmap(hist, band, outdir="."):
 
         freqs = np.arange(7800, 11200.1)
         ticks = np.append(np.arange(7800, 11200.1, 500), 11200)
-        indices = (np.where(np.in1d(freqs, ticks) == True)[0])#, len(band))
+        indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
         plt.title("X band hit counts")
@@ -572,7 +594,6 @@ if __name__ == "__main__":
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
-    # parser.add_argument("-DC", "-d", help="files contain DC spikes that need to be removed", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
     parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
     parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
@@ -587,7 +608,6 @@ if __name__ == "__main__":
     print("Done.")
     
     # check to remove DC spikes
-    # if args.DC:
     if "%s_band_no_DC_spike"%args.band not in args.folder:
         print("Removing DC spikes...")
         dat_files = remove_spikes(dat_files, args.band, outdir=args.outdir)

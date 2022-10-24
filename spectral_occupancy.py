@@ -94,7 +94,7 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
             new_dat_files.append(one_path)
 
     
-    for i in trange(len(dat_files)):
+    for i in range(len(dat_files)):
         #get the path
         dat = dat_files[i]
         old_dat = os.path.basename(dat)
@@ -392,6 +392,9 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
         A list of the filepaths of unspliced dat files from a single observation
     band : str
         The observing band from Green Bank Telescope. Either {"L", "S", "C", "X"}
+    bad_cadence_flag : bool
+        A flag aboout whether there has already been a bad cadence
+        flagged in the dataset
     outdir : str
         directory where the problematic cadences are saved
 
@@ -400,19 +403,50 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
     datfiles : list
         A list of the filepaths of unspliced dat files 
         that will be included in analysis, without the overlap nodes
+    bad_cadence_flag : bool
+        A flag aboout whether there has already been a bad cadence
+        flagged in the dataset
     """
     datfiles = np.array(datfiles)
     if os.path.split(datfiles[0])[1].find('spliced') == -1:
         nodes = np.array([os.path.split(file)[1][:5] for file in datfiles])
-        if band == 'S' or band == 'L':
+        if band == "L":
+            if len(nodes) == 8:
+                return datfiles, bad_cadence_flag
+            else:
+                # get node numbers
+                uqnodes = sorted(np.unique(nodes))
+                node_string = ""
+                for i in range(len(uqnodes)):
+                    node_string = node_string + uqnodes[i][-1]
+                okay_nodes = ["1234567", "0123456", "123456", "123467", "012346", "12346", "0123467"]
+                if node_string in okay_nodes:
+                    # this is ok and return the nodes
+                    return datfiles, bad_cadence_flag
+                else:
+                    print(f'There are {len(nodes)} nodes, not 8 as L-Band requires')
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    bad_cadence_flag = True
+                    return -9999, bad_cadence_flag 
+        if band == 'S':
             # check if the files have 8 nodes
             if len(nodes) == 8:
                 return datfiles, bad_cadence_flag
             else:
-                print(f'There are {len(nodes)} nodes, not 8 as {band}-Band requires')
-                record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
-                bad_cadence_flag = True
-                return -9999, bad_cadence_flag
+                # get node numbers
+                uqnodes = sorted(np.unique(nodes))
+                node_string = ""
+                for i in range(len(uqnodes)):
+                    node_string = node_string + uqnodes[i][-1]
+                okay_nodes = ["1234567", "0123456", "234567", "123456"]
+                if node_string in okay_nodes:
+                    # this is ok and return the nodes
+                    return datfiles, bad_cadence_flag
+                else:
+                    print(f'There are {len(nodes)} nodes, not 8 as S-Band requires')
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    bad_cadence_flag = True
+                    return -9999, bad_cadence_flag
         else:
             if band == 'C':
                 if len(nodes) == 32:

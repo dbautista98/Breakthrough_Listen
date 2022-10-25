@@ -120,8 +120,15 @@ def read_txt(text_file):
     with open(text_file) as open_file:
         lines = open_file.readlines()
     
+    to_remove = []
     for i in range(len(lines)):
         lines[i] = lines[i].replace("\n", "")
+        if "_" not in os.path.basename(lines[i]):
+            to_remove.append(lines[i])
+    n_remove = len(to_remove)
+    if n_remove > 0:
+        for i in range(n_remove):
+            lines.remove(to_remove[i])
     return lines
 
 def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None): 
@@ -595,14 +602,14 @@ if __name__ == "__main__":
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
-    parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
-    parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
-    parser.add_argument("-time_bins", "-tb", help="size of time step the data will be broken up into ", default=None)
+    # parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
+    # parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
+    # parser.add_argument("-time_bins", "-tb", help="size of time step the data will be broken up into ", default=None)
     args = parser.parse_args()
     
     print("Gathering files...",end="")
     if args.t == None:
-        dat_files = glob.glob(args.folder+"/*.dat")
+        dat_files = glob.glob(args.folder+"/*_*.dat")
     else:
         dat_files = read_txt(args.t)
     print("Done.")

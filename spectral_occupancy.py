@@ -1,9 +1,7 @@
-from tempfile import tempdir
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pandas
-import turbo_seti.find_event as find
 import glob
 import argparse
 import os
@@ -14,6 +12,7 @@ from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 from astropy.time import Time
 from astroplan import Observer
 from astroplan.plots import plot_sky
+import re
 
 def band_edges(GBT_band):
     """
@@ -131,6 +130,90 @@ def read_txt(text_file):
             lines.remove(to_remove[i])
     return lines
 
+def custom_read_dat(filename):
+    """
+    Read a turboseti .dat file.
+    Arguments
+    ----------
+    filename : str
+        Name of .dat file to open.
+
+    Returns
+    -------
+    df_data : dict
+        Pandas dataframe of hits.
+    MJD : float
+        the timestamp of the observation
+    """
+    file_dat = open(filename.strip())
+    hits = file_dat.readlines()
+
+    # Get info from the .dat file header
+    FileID = hits[1].strip().split(':')[-1].strip()
+    Source = hits[3].strip().split(':')[-1].strip()
+
+    MJD = hits[4].strip().split('\t')[0].split(':')[-1].strip()
+    mjd = hits[4].strip().split('\t')[0].split(':')[-1].strip()
+    RA = hits[4].strip().split('\t')[1].split(':')[-1].strip()
+    DEC = hits[4].strip().split('\t')[2].split(':')[-1].strip()
+
+    DELTAT = hits[5].strip().split('\t')[0].split(':')[-1].strip()  # s
+    DELTAF = hits[5].strip().split('\t')[1].split(':')[-1].strip()  # Hz
+
+    # Get info from individual hits (the body of the .dat file)
+    all_hits = []
+    for hit_line in hits[9:]:
+        hit_fields = re.split(r'\s+', re.sub(r'[\t]', ' ', hit_line).strip())
+        all_hits.append(hit_fields)
+
+    # Now reorganize that info to be grouped by column (parameter)
+    # not row (individual hit)
+    if all_hits:
+        TopHitNum = list(zip(*all_hits))[0]
+        DriftRate = [float(df) for df in list(zip(*all_hits))[1]]
+        SNR = [float(ss) for ss in list(zip(*all_hits))[2]]
+        Freq = [float(ff) for ff in list(zip(*all_hits))[3]]
+        ChanIndx = list(zip(*all_hits))[5]
+        FreqStart = list(zip(*all_hits))[6]
+        FreqEnd = list(zip(*all_hits))[7]
+        CoarseChanNum = list(zip(*all_hits))[10]
+        FullNumHitsInRange = list(zip(*all_hits))[11]
+
+        data = {'TopHitNum': TopHitNum,
+                'DriftRate': DriftRate,
+                'SNR': SNR,
+                'Freq': Freq,
+                'ChanIndx': ChanIndx,
+                'FreqStart': FreqStart,
+                'FreqEnd': FreqEnd,
+                'CoarseChanNum': CoarseChanNum,
+                'FullNumHitsInRange': FullNumHitsInRange
+                }
+
+        # Creating pandas dataframe from data we just read in
+        df_data = pd.DataFrame(data)
+        df_data = df_data.apply(pd.to_numeric)
+
+    else:
+        df_data = pd.DataFrame()
+
+    # Matching column information from before to the .dat data we read in
+    df_data['FileID'] = FileID
+    df_data['Source'] = Source.upper()
+    df_data['MJD'] = MJD
+    df_data['RA'] = RA
+    df_data['DEC'] = DEC
+    df_data['DELTAT'] = DELTAT
+    df_data['DELTAF'] = DELTAF
+
+    # Adding extra columns that will be filled out by this program
+    df_data['Hit_ID'] = ''
+    df_data['status'] = ''
+    df_data['in_n_ons'] = ''
+    df_data['RFI_in_range'] = ''
+
+    return df_data, mjd
+
 def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None): 
     """
     calculates a histogram of the number of hits for a single .dat file
@@ -157,9 +240,10 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
     """
     #read the file into a pandas dataframe
     if type(dat_file) != pandas.core.frame.DataFrame:
-        tbl = find.read_dat(dat_file)
+        tbl, mjd = custom_read_dat(dat_file) # find.read_dat(dat_file)
     else:
         tbl = dat_file
+        mjd = -9999
 
     #make the bins for the histogram
     # band boundaries as listed in Traas 2021
@@ -180,7 +264,7 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         hist, bin_edges = np.histogram([], bins=bins)
     else:
         hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
-    return hist, bin_edges
+    return hist, bin_edges, mjd
 
 def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir="."):
     """
@@ -212,7 +296,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     n_observations : int
         The number of observations in the dataset
     """
-    edges = []
+
     histograms = []
     
     # collect spliced and unspliced observations
@@ -220,10 +304,12 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     unique_unspliced_observations = get_unique_observations(unspliced_df)
 
     print("Calculating histograms...",end="")
+    mjds = []
     # calculate histograms for the spliced .dat files
     for file in spliced_df["filepath"].values:
-        hist, bin_edges = calculate_hist(file, GBT_band, bin_width)
+        hist, bin_edges, mjd = calculate_hist(file, GBT_band, bin_width)
         histograms.append(hist)
+        mjds.append(mjd)
 
     # calculate the histograms for the unspliced .dat files
     bad_cadence_flag = False
@@ -231,12 +317,16 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
         good_nodes, bad_cadence_flag = getGoodNodes(obs, GBT_band, bad_cadence_flag, outdir=outdir)
         if type(good_nodes) == int:
             continue
-        hist, bin_edges = calculate_hist(good_nodes[0], GBT_band, bin_width)
+        hist, bin_edges, mjd = calculate_hist(good_nodes[0], GBT_band, bin_width)
         for i in range(1, len(good_nodes)):
-            temp_hist, bin_edges = calculate_hist(good_nodes[i], GBT_band, bin_width)
+            temp_hist, bin_edges, mjd = calculate_hist(good_nodes[i], GBT_band, bin_width)
             hist += temp_hist
         histograms.append(hist)
+        mjds.append(hist)
     print("Done.")  
+
+    # sort histograms by mjd
+    histograms = [x for _,x in sorted(zip(mjds,histograms))]
 
     # plot heatmap
     plot_heatmap(histograms, GBT_band, outdir=outdir)

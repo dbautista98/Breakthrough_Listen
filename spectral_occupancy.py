@@ -61,9 +61,8 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
     GBT_band : str
         the band at which the data was collected
         choose from {"L", "S", "C", "X"}
-    num_course_channels : int
-        the number of course channels in a frequency band. The 
-        default is 512
+    outdir : str
+        directory where the results are saved
         
     Returns
     ----------
@@ -115,6 +114,11 @@ def read_txt(text_file):
     text_file : str
         A string indicating the location of the 
         text file pointing to the dat files 
+
+    Returns
+    --------
+    lines : list
+        A list containing the lines of the txt file
     """
     with open(text_file) as open_file:
         lines = open_file.readlines()
@@ -237,6 +241,8 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         the count of hits in each bin
     bin_edges : numpy.ndarray
         the edge values of each bin. Has length Nbins+1
+    MJD : float
+        the modified julian date at the start of the observation
     """
     #read the file into a pandas dataframe
     if type(dat_file) != pandas.core.frame.DataFrame:
@@ -285,6 +291,8 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
         only L and S band have notch filters
     bin_width : float
         width of the hisrogram bins in MHz
+    outdir : str
+        directory where the results are saved
 
     Returns
     --------
@@ -325,11 +333,8 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
         mjds.append(hist)
     print("Done.")  
 
-    # sort histograms by mjd
-    histograms = [x for _,x in sorted(zip(mjds,histograms))]
-
     # plot heatmap
-    plot_heatmap(histograms, GBT_band, outdir=outdir)
+    plot_heatmap(histograms, GBT_band, outdir=outdir, times=mjds)
     
     # define the upper and lower bounds of the band
     min_freq = np.min(bin_edges)
@@ -441,7 +446,28 @@ def get_unique_observations(df):
         unique_observations.append(unique_paths)
     return unique_observations
 
-def record_bad_cadence(first_dat, band, nodes, outdir, alread_called):
+def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
+    """
+    records metadata about a flagged bad cadence to a csv file
+
+    Arguments
+    ----------
+    first_dat : str
+        dat file for the first node in the observation
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    nodes : list
+        list of the node names that are present
+    outdir : str
+        directory where the results are saved
+    already_called : bool
+        A flag aboout whether there has already been a bad cadence
+        flagged in the dataset. Set to False by default. A False flag
+        will cause a new csv header to be printed before writing the metadata. 
+        A True flag will skip the writing of a new csv header, and will go
+        straight to writing the metadata
+    """
     csv_path = outdir + "/%sband_bad_cadences.csv"%band.lower()
     print("bad cadence")
     print("recording to: " + csv_path)
@@ -480,7 +506,7 @@ def record_bad_cadence(first_dat, band, nodes, outdir, alread_called):
     
 def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
     """
-    Credit to Noah Franz for writing this 
+    Credit to Noah Franz for writing the original 
     algorithm in https://github.com/noahfranz13/BL-TESSsearch/blob/main/analysis/hit_analysis.ipynb
 
     Selects the nodes that will be used for analysis, and discards
@@ -605,6 +631,21 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
         return datfiles, bad_cadence_flag
 
 def plot_AltAz(df, band, outdir="."):
+    """
+    plots the altitude and azimuth of the given observations
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing right ascension (RA), declinaiton (DEC)
+        and modified julian date (MJD) values for each observation
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    outdir : str
+        directory where the generated plots will be saved. 
+        default is the current working directory
+    """
     targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
     times = Time(np.array(df["MJD"].values, dtype=float), format="mjd")
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
@@ -615,6 +656,26 @@ def plot_AltAz(df, band, outdir="."):
     plt.close()
 
 def get_AltAz(df):
+    """
+    Takes a dataframe containing the RA, DEC and MJD values 
+    and returns the altitude and azimuth angles the telescope
+    was pointing during the observation
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing right ascension (RA), declinaiton (DEC)
+        and modified julian date (MJD) values for each observation
+
+    Returns
+    --------
+    ALT : astropy.coordinates.angles.Latitude
+        The altidude angle of the telescope; how many degrees above the horizon
+        the telescope was pointing
+    AZ : astropy.coordinates.angles.Longitude
+        the azimuthal angle the telescope was pointing; how many degrees from 
+        true north it was aimed, following the right hand rule
+    """
     targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
     times = Time(np.array(df["MJD"].values, dtype=float), format="mjd") 
     gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
@@ -625,7 +686,32 @@ def get_AltAz(df):
 
     return ALT, AZ
 
-def plot_heatmap(hist, band, outdir="."):
+def plot_heatmap(hist, band, outdir=".", times=None):
+    """
+    takes a set of histograms and plots them 
+    as an image, with the horizontal axis showing
+    the Frequency and the vertical showing the 
+    order in time
+
+    Arguments
+    ----------
+    hist : list
+        list of histograms, where each entry is the 
+        histogram of hits from a single observation
+    band : str
+        the band at which the data was collected
+        choose from {"L", "S", "C", "X"}
+    outdir : str
+        directory where the results are saved
+    times : list
+        list of the start time of each observation
+        in the list of histograms
+    """
+
+    # check to sort histograms by mjd
+    if times is not None:
+        histograms = [x for _,x in sorted(zip(times,histograms))]
+
     if band == "L":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")

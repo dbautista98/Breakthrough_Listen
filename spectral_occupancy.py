@@ -92,7 +92,7 @@ def remove_spikes(dat_files, GBT_band, outdir="."):
             new_dat_files.append(one_path)
 
     
-    for i in range(len(dat_files)):
+    for i in trange(len(dat_files)):
         #get the path
         dat = dat_files[i]
         old_dat = os.path.basename(dat)
@@ -317,7 +317,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     for file in spliced_df["filepath"].values:
         hist, bin_edges, mjd = calculate_hist(file, GBT_band, bin_width)
         histograms.append(hist)
-        mjds.append(mjd)
+        mjds.append(float(mjd))
 
     # calculate the histograms for the unspliced .dat files
     bad_cadence_flag = False
@@ -710,7 +710,7 @@ def plot_heatmap(hist, band, outdir=".", times=None):
 
     # check to sort histograms by mjd
     if times is not None:
-        histograms = [x for _,x in sorted(zip(times,histograms))]
+        hist = [x for _,x in sorted(zip(times,hist))]
 
     if band == "L":
         plt.figure(figsize=(15,3))

@@ -330,7 +330,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
             temp_hist, bin_edges, mjd = calculate_hist(good_nodes[i], GBT_band, bin_width)
             hist += temp_hist
         histograms.append(hist)
-        mjds.append(hist)
+        mjds.append(float(mjd))
     print("Done.")  
 
     # plot heatmap
@@ -717,8 +717,6 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
         plt.colorbar(label="hit count")
 
-        n_ticks = 9
-
         freqs = np.arange(1100, 1900.1)
         # ticks = np.linspace(1100, 1900, num=n_ticks)
         ticks = np.asarray([1100, 1200, 1300, 1380, 1420, 1500, 1600, 1700, 1800, 1900])
@@ -732,8 +730,6 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
         plt.colorbar(label="hit count")
-
-        n_ticks = 11
 
         freqs = np.arange(1800, 2800.1)
         ticks = np.arange(1800, 2800.1, 100)

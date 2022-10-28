@@ -21,6 +21,7 @@ dependencies:
   - xz=5.2.5
   - zlib=1.2.11
   - pip:
+    - astroplan==0.8
     - astropy==4.2
     - blimpy @ git+https://github.com/UCBerkeleySETI/blimpy@69dcd708753bc32123b14a4eef57feec91b4c87b
     - cloudpickle==1.6.0

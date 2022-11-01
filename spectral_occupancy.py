@@ -864,8 +864,6 @@ if __name__ == "__main__":
     else:
         df = pd.read_csv(args.folder + "/locations.csv")
 
-    dat_files = df["filepath"].values
-
     title_addition = ""
 
     # check if split by time 

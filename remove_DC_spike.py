@@ -70,7 +70,7 @@ def grab_parameters(dat_file, GBT_band, outdir):
         DEC = hits[4].strip().split('\t')[2].split(':')[-1].strip()
         alt, az = get_AltAz(RA, DEC, MJD)
         # extract hour of day from MJD and record to csv
-        hour = Time(MJD, format="mjd").datetime.hour
+        hour = Time(MJD, format="mjd").datetime.hour - 5 # adjust time zone from UTC to eastern (UTC-5)
         with open(outdir + "/locations.csv", "a") as f:
             f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + str(hour) + "," + filepath + "\n")
         return -9999, -9999, -9999, -9999

@@ -774,8 +774,8 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
             plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
 
 def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_time):
-    on_mask = np.where((df["hour"] >= lower_time) & (df["hour"] <= upper_time))
-    off_mask = np.where((df["hour"] < lower_time) | (df["hour"] > upper_time))
+    on_mask = np.where((df["hour (UTC - 5)"] >= lower_time) & (df["hour (UTC - 5)"] <= upper_time))
+    off_mask = np.where((df["hour (UTC - 5)"] < lower_time) | (df["hour (UTC - 5)"] > upper_time))
     on_df = df.iloc[on_mask]
     off_df = df.iloc[off_mask]
     on_title_addition = "hours %s to %s"%(lower_time, upper_time)

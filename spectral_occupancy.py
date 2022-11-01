@@ -216,7 +216,7 @@ def custom_read_dat(filename):
     df_data['in_n_ons'] = ''
     df_data['RFI_in_range'] = ''
 
-    return df_data, mjd
+    return df_data, float(mjd)
 
 def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None): 
     """
@@ -487,13 +487,10 @@ def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
         else:
             target = filename.split("_")[4]
             index = 4
-        # handle edge cases (:(
-        if target.upper() == "AND":
+        # handle edge cases :):
+        odd_names = ["AND", "LGS", "SAG", "PSR", "WHI", "LV", "SEGUE", "CAS", "MCG", "KUG"]
+        if target.upper() in odd_names:
             target = filename.split("_")[index] + "_" + filename.split("_")[index + 1]
-        if target.upper() == "LGS":
-            target = filename.split("_")[index] + filename.split("_")[index + 1]
-        if target.upper() == "SAG":
-            target = filename.split("_")[index] + filename.split("_")[index + 1]
         f.write(target.upper() + ",")
 
         # number of nodes present
@@ -707,11 +704,15 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         list of the start time of each observation
         in the list of histograms
     """
-
+    
     # check to sort histograms by mjd
     if times is not None:
-        hist = [x for _,x in sorted(zip(times,hist))]
-
+        # hist = [x for _,x in sorted(zip(times,hist))]
+        temp = pd.DataFrame({"time":times, "data":hist})
+        sorted = temp.sort_values(by="time")
+        hist = sorted["data"].values
+        hist = list(hist)
+        
     if band == "L":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")

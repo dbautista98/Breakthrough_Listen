@@ -873,8 +873,10 @@ if __name__ == "__main__":
         split_data(args.band, df, args.outdir, args.width, args.notch_filter, args.save, args.lower_time, args.upper_time)
     else:
         # alt, az = get_AltAz(df) # read this from csv
-        plot_AltAz(df, args.band, outdir=args.outdir, title_addition=title_addition)
-        
+        plot_AltAz(df)
+        plt.savefig(args.outdir + "/%s_band_GBT_alt_az.pdf"%(args.band), bbox_inches="tight", transparent=False)
+        plt.close("all")
+
         bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
         
         if args.save:

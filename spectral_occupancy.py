@@ -272,7 +272,7 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges, mjd
 
-def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir="."):
+def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir=".", title_addition=""):
     """
     Takes in a list of .dat files and makes a true/false table of hits in a frequency bin
     
@@ -334,7 +334,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     print("Done.")  
 
     # plot heatmap
-    plot_heatmap(histograms, GBT_band, outdir=outdir, times=mjds)
+    plot_heatmap(histograms, GBT_band, outdir=outdir, times=mjds, title_addition=title_addition)
     
     # define the upper and lower bounds of the band
     min_freq = np.min(bin_edges)
@@ -355,19 +355,16 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     if GBT_band=="L":
         if notch_filter:
             print("Excluding hits in the range 1200-1341 MHz")
-            df = df[(df["freq"] < 1200) | (df["freq"] > 1341)]
-            first_edge = np.arange(min_freq, 1200, bin_width)
-            second_edge= np.arange(1341, max_freq, bin_width) #may or may not need max_freq+1
-            bin_edges = np.append(first_edge, second_edge)
+            mask = np.where((df["freq"] > 1200) & (df["freq"] < 1341))
+            for col in df.columns[1:]:
+                df[col].values[mask] = 0
     
     if GBT_band=="S":
         if notch_filter:
             print("Excluding hits in the range 2300-2360 MHz")
-            df = df[(df["freq"] < 2300) | (df["freq"] > 2360)]
-            first_edge = np.arange(min_freq, 2300, bin_width)
-            second_edge= np.arange(2360, max_freq, bin_width) #may or may not need max_freq+1
-            bin_edges = np.append(first_edge, second_edge)
-
+            mask = np.where((df["freq"] > 2300) & (df["freq"] < 2360))
+            for col in df.columns[1:]:
+                df[col].values[mask] = 0
      
     # sum up the number of entries that have a hit and divide by the number of .dat files
     data_labels = df.columns[2:]
@@ -627,7 +624,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
         print('This file is already spliced, returning all files')
         return datfiles, bad_cadence_flag
 
-def plot_AltAz(df, band, outdir="."):
+def plot_AltAz(df, plot_color="#1f77b4", label=""):
     """
     plots the altitude and azimuth of the given observations
 
@@ -648,9 +645,7 @@ def plot_AltAz(df, band, outdir="."):
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
    
     
-    plot_sky(targets, GBT, times, style_kwargs={"s":2})
-    plt.savefig(outdir + "/%s_band_GBT_alt_az.pdf"%band, bbox_inches="tight", transparent=False)
-    plt.close()
+    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label})
 
 def get_AltAz(df):
     """
@@ -683,7 +678,7 @@ def get_AltAz(df):
 
     return ALT, AZ
 
-def plot_heatmap(hist, band, outdir=".", times=None):
+def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
     """
     takes a set of histograms and plots them 
     as an image, with the horizontal axis showing
@@ -724,8 +719,11 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
-        plt.title("L band hit counts")
-        plt.savefig(outdir + "/L_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+        plt.title("L band hit counts %s"%title_addition)
+        if title_addition != "":
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+        else:
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band ==  "S":
         plt.figure(figsize=(15,3))
@@ -737,8 +735,11 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
-        plt.title("S band hit counts")
-        plt.savefig(outdir + "/S_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+        plt.title("S band hit counts %s"%title_addition)
+        if title_addition != "":
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+        else:
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "C":
         plt.figure(figsize=(15,3))
@@ -750,8 +751,11 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
-        plt.title("C band hit counts")
-        plt.savefig(outdir + "/C_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+        plt.title("C band hit counts %s"%title_addition)
+        if title_addition != "":
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+        else:
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "X":
         plt.figure(figsize=(15,3))
@@ -763,8 +767,71 @@ def plot_heatmap(hist, band, outdir=".", times=None):
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
         plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
         plt.xlabel("Frequency [MHz]")
-        plt.title("X band hit counts")
-        plt.savefig(outdir + "/X_band_heatmap.pdf", bbox_inches="tight", transparent=False)
+        plt.title("X band hit counts %s"%title_addition)
+        if title_addition != "":
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+        else:
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+
+def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_time):
+    on_mask = np.where((df["hour"] >= lower_time) & (df["hour"] <= upper_time))
+    off_mask = np.where((df["hour"] < lower_time) | (df["hour"] > upper_time))
+    on_df = df.iloc[on_mask]
+    off_df = df.iloc[off_mask]
+    on_title_addition = "hours %s to %s"%(lower_time, upper_time)
+    off_title_addition = "hours %s to %s"%(upper_time, lower_time)
+    on_color = "orange"
+    off_color = '#1f77b4'
+
+    plot_AltAz(on_df, plot_color=on_color, label=on_title_addition)
+    plot_AltAz(off_df, plot_color=off_color, label=off_title_addition)
+    plt.legend(loc="upper right", bbox_to_anchor=(0.3,0))
+    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s_%s.pdf"%(band, lower_time, upper_time), bbox_inches="tight", transparent=False)
+    plt.close("all")
+
+    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=args.band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
+    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=args.band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
+
+    print("Saving plot...",end="")
+    
+    plt.figure(figsize=(10,5))
+    width = np.diff(bin_edges)[0]
+
+    on_higher_mask = np.where(on_prob_hist > off_prob_hist)
+    off_higher_mask = np.where(off_prob_hist > on_prob_hist)
+    equal_height_mask = np.where(on_prob_hist == off_prob_hist)
+    # masks = [on_higher_mask, off_higher_mask, equal_height_mask]
+
+    # plot the on higher first
+    higher = on_prob_hist[on_higher_mask]
+    temp_bins = bin_edges[:-1][on_higher_mask]
+    plt.bar(temp_bins, higher, width=width, color=on_color, label=on_title_addition)
+
+    # plot the off higher second
+    higher = off_prob_hist[off_higher_mask]
+    temp_bins = bin_edges[:-1][off_higher_mask]
+    plt.bar(temp_bins, higher, width=width, color=off_color, label=off_title_addition)
+
+    # plot the lower bins next
+    lower = on_prob_hist[off_higher_mask]
+    temp_bins = bin_edges[:-1][off_higher_mask]
+    plt.bar(temp_bins, lower, width=width, color=on_color)
+
+    lower = off_prob_hist[on_higher_mask]
+    temp_bins = bin_edges[:-1][on_higher_mask]
+    plt.bar(temp_bins, lower, width=width, color=off_color)
+
+    # plot the equal height last
+    equal = on_prob_hist[equal_height_mask]
+    temp_bins = bin_edges[:-1][equal_height_mask]
+    plt.bar(temp_bins, equal, width=width, color=off_color)
+
+    plt.xlabel("Frequency [Mhz]")
+    plt.ylabel("Fraction with Hits")
+    plt.title("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
+    plt.legend()
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s.pdf"%(band, lower_time, upper_time), bbox_inches="tight", transparent=False)
+    print("Done")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
@@ -775,6 +842,8 @@ if __name__ == "__main__":
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
+    parser.add_argument("-lower_time", "-l", help="split the data into two time intervals. this sets the earlier time boundary. range is on 24 hour time", type=int, default=None)
+    parser.add_argument("-upper_time", "-u", help="split the data into two time intervals. this sets the earlier time boundary range is on 24 hour time", type=int, default=None)
     # parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
     # parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
     # parser.add_argument("-time_bins", "-tb", help="size of time step the data will be broken up into ", default=None)
@@ -795,24 +864,35 @@ if __name__ == "__main__":
     else:
         df = pd.read_csv(args.folder + "/locations.csv")
 
-    alt, az = get_AltAz(df) # read this from csv
-    plot_AltAz(df, args.band, outdir=args.outdir)
-    
-    bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
-    
-    if args.save:
-        print("Saving histogram data")
-        to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
-        filename = args.outdir + "/turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
-        with open(filename, "wb") as f:
-            pickle.dump(to_save, f)
+    dat_files = df["filepath"].values
 
-    print("Saving plot...",end="")
-    plt.figure(figsize=(10,5))
-    width = np.diff(bin_edges)[0]
-    plt.bar(bin_edges[:-1], prob_hist, width=width)
-    plt.xlabel("Frequency [Mhz]")
-    plt.ylabel("Fraction with Hits")
-    plt.title("Spectral Occupancy: n=%s observations"%n_observations)
-    plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
-    print("Done")
+    title_addition = ""
+
+    # check if split by time 
+    if (args.lower_time is not None) and (args.upper_time is not None):
+        print("splitting data between hours of %s and %s"%(args.lower_time, args.upper_time))
+        split_data(args.band, df, args.outdir, args.width, args.notch_filter, args.save, args.lower_time, args.upper_time)
+    else:
+        # alt, az = get_AltAz(df) # read this from csv
+        plot_AltAz(df)
+        plt.savefig(args.outdir + "/%s_band_GBT_alt_az.pdf"%(args.band), bbox_inches="tight", transparent=False)
+        plt.close("all")
+
+        bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
+        
+        if args.save:
+            print("Saving histogram data")
+            to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
+            filename = args.outdir + "/turboSETI_%s_band_spectral_occupancy_%s_MHz_bins.pkl"%(args.band, args.width)
+            with open(filename, "wb") as f:
+                pickle.dump(to_save, f)
+
+        print("Saving plot...",end="")
+        plt.figure(figsize=(10,5))
+        width = np.diff(bin_edges)[0]
+        plt.bar(bin_edges[:-1], prob_hist, width=width)
+        plt.xlabel("Frequency [Mhz]")
+        plt.ylabel("Fraction with Hits")
+        plt.title("Spectral Occupancy: n=%s observations"%n_observations)
+        plt.savefig(args.outdir + "/%s_band_spectral_occupancy.pdf"%args.band, bbox_inches="tight", transparent=False)
+        print("Done")

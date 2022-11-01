@@ -465,7 +465,7 @@ def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
         A True flag will skip the writing of a new csv header, and will go
         straight to writing the metadata
     """
-    csv_path = outdir + "/%sband_bad_cadences.csv"%band.lower()
+    csv_path = outdir + "%sband_bad_cadences.csv"%band.lower()
     print("bad cadence")
     print("recording to: " + csv_path)
     uqnodes = sorted(np.unique(nodes))
@@ -789,8 +789,8 @@ def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_ti
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s_%s.pdf"%(band, lower_time, upper_time), bbox_inches="tight", transparent=False)
     plt.close("all")
 
-    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=args.band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
-    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=args.band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
+    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir + "/" + on_title_addition.replace(" ", "_"), title_addition=on_title_addition)
+    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir + "/" + off_title_addition.replace(" ", "_"), title_addition=off_title_addition)
 
     print("Saving plot...",end="")
     

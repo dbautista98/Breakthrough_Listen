@@ -195,7 +195,7 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         the number of course channels in a frequency band. The 
         default is 512
     """
-    csv_header = "RA,DEC,MJD,ALT,AZ,hour,filepath\n"
+    csv_header = "RA,DEC,MJD,ALT,AZ,hour (UTC - 5),filepath\n"
     if not os.path.exists(outdir + "/locations.csv"):
         with open(outdir + "/locations.csv", "w") as f:
             f.write(csv_header)

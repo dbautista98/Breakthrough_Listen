@@ -784,13 +784,11 @@ def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""
     plt.title("%s Band spectral occupancy ratio of %s / remaining"%(band, title_addition))
     plt.savefig(outdir + "/%s_band_ratio_%s.pdf"%(band, title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
 
-def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_time):
-    on_mask = np.where((df["hour (UTC - 5)"] >= lower_time) & (df["hour (UTC - 5)"] <= upper_time))
-    off_mask = np.where((df["hour (UTC - 5)"] < lower_time) | (df["hour (UTC - 5)"] > upper_time))
+def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, lower, upper, split_type):
     on_df = df.iloc[on_mask]
     off_df = df.iloc[off_mask]
-    on_title_addition = "hours %s to %s"%(lower_time, upper_time)
-    off_title_addition = "hours %s to %s"%(upper_time, lower_time)
+    on_title_addition = "%s %s to %s"%(split_type, lower, upper)
+    off_title_addition = "%s %s to %s"%(split_type, upper, lower)
     on_color = "orange"
     off_color = '#1f77b4'
 
@@ -817,7 +815,8 @@ def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_ti
     plt.ylabel("Fraction with Hits")
     plt.title("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
     plt.legend()
-    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s.pdf"%(band, lower_time, upper_time), bbox_inches="tight", transparent=False)
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches="tight", transparent=False)
+    plt.close("all")
     print("Done")
 
 if __name__ == "__main__":
@@ -829,10 +828,13 @@ if __name__ == "__main__":
     parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
     parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
     parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
-    parser.add_argument("-lower_time", "-l", help="split the data into two time intervals. this sets the earlier time boundary. range is on 24 hour time", type=int, default=None)
-    parser.add_argument("-upper_time", "-u", help="split the data into two time intervals. this sets the earlier time boundary range is on 24 hour time", type=int, default=None)
-    # parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
-    # parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
+    parser.add_argument("-lower_time", "-lt", help="split the data into two time intervals. this sets the earlier time boundary. range is on 24 hour time", type=int, default=None)
+    parser.add_argument("-upper_time", "-ut", help="split the data into two time intervals. this sets the earlier time boundary range is on 24 hour time", type=int, default=None)
+    parser.add_argument("-lower_alt", "-la", help="split the data into two altitude intervals. this sets the lower altitude boundary. range is from 0-90 degrees", type=int, default=None)
+    parser.add_argument("-upper_alt", "-ua", help="split the data into two altitude intervals. this sets the upper altitude boundary. range is from 0-90 degrees", type=int, default=None)
+    parser.add_argument("-lower_az", "-lz", help="split the data into two azimuth intervals. this sets the lower azimuth boundary. range is from 0-360 degrees", type=int, default=None)
+    parser.add_argument("-upper_az", "-uz", help="split the data into two azimuth intervals. this sets the upper azimuth boundary. range is from 0-360 degrees", type=int, default=None)
+    parser.add_argument("-no_default", "-no", help="flag to tell program NOT to plot the default spectral occupancy with zero grouping of the data", default=False, action="store_true")
     args = parser.parse_args()
     
     print("Gathering files...",end="")
@@ -854,12 +856,26 @@ if __name__ == "__main__":
     
     title_addition = ""
 
-    # check if split by time 
+    # check if splitting data by time
     if (args.lower_time is not None) and (args.upper_time is not None):
         print("splitting data between hours of %s and %s"%(args.lower_time, args.upper_time))
-        split_data(args.band, df, args.outdir, args.width, args.notch_filter, args.save, args.lower_time, args.upper_time)
-    else:
-        # alt, az = get_AltAz(df) # read this from csv
+        on_mask = np.where((df["hour (UTC - 5)"] >= args.lower_time) & (df["hour (UTC - 5)"] <= args.upper_time))
+        off_mask = np.where((df["hour (UTC - 5)"] < args.lower_time) | (df["hour (UTC - 5)"] > args.upper_time))
+        split_data(args.band, df, on_mask, off_mask, args.outdir, args.width, args.notch_filter, args.save, args.lower_time, args.upper_time, split_type="hour")
+    # check if splitting data by altitude
+    if (args.lower_alt is not None) and (args.upper_alt is not None):
+        print("splitting the data between the altitude angles of %s and %s degrees"%(args.lower_alt, args.upper_alt))
+        on_mask = np.where((df["ALT"] >= args.lower_alt) & (df["ALT"] <= args.upper_alt))
+        off_mask = np.where((df["ALT"] < args.lower_alt) | (df["ALT"] > args.upper_alt))
+        split_data(args.band, df, on_mask, off_mask, args.outdir, args.width, args.notch_filter, args.save, args.lower_alt, args.upper_alt, split_type="altitude")
+    # check if splitting data by azimuth
+    if (args.lower_az is not None) and (args.upper_az is not None):
+        print("splitting the data between the azimuth angles of %s and %s degrees"%(args.lower_az, args.upper_az))
+        on_mask = np.where((df["AZ"] >= args.lower_az) & (df["AZ"] <= args.upper_az))
+        off_mask = np.where((df["AZ"] < args.lower_az) | (df["AZ"] > args.upper_az))
+        split_data(args.band, df, on_mask, off_mask, args.outdir, args.width, args.notch_filter, args.save, args.lower_az, args.upper_az, split_type="azimuth")
+    # check if plotting in default manner
+    if not args.no_default:
         plot_AltAz(df)
         plt.savefig(args.outdir + "/%s_band_GBT_alt_az.pdf"%(args.band), bbox_inches="tight", transparent=False)
         plt.close("all")

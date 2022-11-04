@@ -539,12 +539,12 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
     datfiles = np.array(datfiles)
     if os.path.split(datfiles[0])[1].find('spliced') == -1:
         nodes = np.array([os.path.split(file)[1][:5] for file in datfiles])
+        uqnodes = sorted(np.unique(nodes))
         if band == "L":
-            if len(nodes) == 8:
+            if len(uqnodes) == 8:
                 return datfiles, bad_cadence_flag
             else:
                 # get node numbers
-                uqnodes = sorted(np.unique(nodes))
                 node_string = ""
                 for i in range(len(uqnodes)):
                     node_string = node_string + uqnodes[i][-1]
@@ -559,11 +559,10 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     return -9999, bad_cadence_flag 
         elif band == 'S':
             # check if the files have 8 nodes
-            if len(nodes) == 8:
+            if len(uqnodes) == 8:
                 return datfiles, bad_cadence_flag
             else:
                 # get node numbers
-                uqnodes = sorted(np.unique(nodes))
                 node_string = ""
                 for i in range(len(uqnodes)):
                     node_string = node_string + uqnodes[i][-1]
@@ -577,14 +576,12 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
         elif band == 'C':
-            if len(nodes) == 32:
-                uqnodes = sorted(np.unique(nodes))
+            if len(uqnodes) == 32:
                 nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16], uqnodes[23], uqnodes[24]]
                 i_to_rm = rm_nodes(nodes_to_rm, nodes)
                 return np.delete(datfiles, i_to_rm), bad_cadence_flag
             else:
                 # get node numbers
-                uqnodes = sorted(np.unique(nodes))
                 node_string = ""
                 for i in range(len(uqnodes)):
                     node_string = node_string + uqnodes[i][-1]
@@ -598,14 +595,12 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
         elif band == 'X':
-            if len(nodes) == 24:
-                uqnodes = sorted(np.unique(nodes))
+            if len(uqnodes) == 24:
                 nodes_to_rm = [uqnodes[7], uqnodes[8], uqnodes[15], uqnodes[16]]
                 i_to_rm = rm_nodes(nodes_to_rm, nodes)
                 return np.delete(datfiles, i_to_rm), bad_cadence_flag
             else:
                 # get node numbers
-                uqnodes = sorted(np.unique(nodes))
                 node_string = ""
                 for i in range(len(uqnodes)):
                     node_string = node_string + uqnodes[i][-1]
@@ -614,7 +609,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     i_to_rm = rm_nodes(nodes_to_rm, nodes)
                     return np.delete(datfiles, i_to_rm), bad_cadence_flag
                 else:
-                    print(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
+                    print(f'There are {len(nodes)} nodes, not 24 as X-Band requires')
                     record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
@@ -644,8 +639,7 @@ def plot_AltAz(df, plot_color="#1f77b4", label=""):
     times = Time(np.array(df["MJD"].values, dtype=float), format="mjd")
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
    
-    
-    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label})
+    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":0.1})
 
 def get_AltAz(df):
     """
@@ -707,11 +701,13 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         sorted = temp.sort_values(by="time")
         hist = sorted["data"].values
         hist = list(hist)
-        
+    
+    hist = np.log10(np.asarray(hist)+1)
+
     if band == "L":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="hit count")
+        plt.colorbar(label="log(hit count)")
 
         freqs = np.arange(1100, 1900.1)
         # ticks = np.linspace(1100, 1900, num=n_ticks)
@@ -721,14 +717,14 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("L band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band ==  "S":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="hit count")
+        plt.colorbar(label="log(hit count)")
 
         freqs = np.arange(1800, 2800.1)
         ticks = np.arange(1800, 2800.1, 100)
@@ -737,14 +733,14 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("S band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "C":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="hit count")
+        plt.colorbar(label="log(hit count)")
 
         freqs = np.arange(4000, 7800.1)
         ticks = np.asarray([4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 7800])
@@ -753,14 +749,14 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("C band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "X":
         plt.figure(figsize=(15,3))
         plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="hit count")
+        plt.colorbar(label="log(hit count)")
 
         freqs = np.arange(7800, 11200.1)
         ticks = np.append(np.arange(7800, 11200.1, 500), 11200)
@@ -769,9 +765,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("X band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
 
 def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_time):
     on_mask = np.where((df["hour (UTC - 5)"] >= lower_time) & (df["hour (UTC - 5)"] <= upper_time))
@@ -797,34 +793,8 @@ def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_ti
     plt.figure(figsize=(10,5))
     width = np.diff(bin_edges)[0]
 
-    on_higher_mask = np.where(on_prob_hist > off_prob_hist)
-    off_higher_mask = np.where(off_prob_hist > on_prob_hist)
-    equal_height_mask = np.where(on_prob_hist == off_prob_hist)
-    # masks = [on_higher_mask, off_higher_mask, equal_height_mask]
-
-    # plot the on higher first
-    higher = on_prob_hist[on_higher_mask]
-    temp_bins = bin_edges[:-1][on_higher_mask]
-    plt.bar(temp_bins, higher, width=width, color=on_color, label=on_title_addition)
-
-    # plot the off higher second
-    higher = off_prob_hist[off_higher_mask]
-    temp_bins = bin_edges[:-1][off_higher_mask]
-    plt.bar(temp_bins, higher, width=width, color=off_color, label=off_title_addition)
-
-    # plot the lower bins next
-    lower = on_prob_hist[off_higher_mask]
-    temp_bins = bin_edges[:-1][off_higher_mask]
-    plt.bar(temp_bins, lower, width=width, color=on_color)
-
-    lower = off_prob_hist[on_higher_mask]
-    temp_bins = bin_edges[:-1][on_higher_mask]
-    plt.bar(temp_bins, lower, width=width, color=off_color)
-
-    # plot the equal height last
-    equal = on_prob_hist[equal_height_mask]
-    temp_bins = bin_edges[:-1][equal_height_mask]
-    plt.bar(temp_bins, equal, width=width, color=off_color)
+    plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5)
+    plt.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5)
 
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")
@@ -846,7 +816,6 @@ if __name__ == "__main__":
     parser.add_argument("-upper_time", "-u", help="split the data into two time intervals. this sets the earlier time boundary range is on 24 hour time", type=int, default=None)
     # parser.add_argument("-altitude_bins", "-alt", help="number of degrees in an altitude bin, default is 90 degrees (the whole sky)", type=float, default=90)
     # parser.add_argument("-azimuth_bins", "-az", help="number of degrees in an azimuth bin, default is 360 degrees (whole horizon)", type=float, default=360)
-    # parser.add_argument("-time_bins", "-tb", help="size of time step the data will be broken up into ", default=None)
     args = parser.parse_args()
     
     print("Gathering files...",end="")
@@ -864,6 +833,8 @@ if __name__ == "__main__":
     else:
         df = pd.read_csv(args.folder + "/locations.csv")
 
+    dat_files = df["filepath"].values
+    
     title_addition = ""
 
     # check if split by time 

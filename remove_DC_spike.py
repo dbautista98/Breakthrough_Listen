@@ -249,6 +249,8 @@ if __name__ == "__main__":
     for i in range(len(dat_files)):
         one_dat = os.path.basename(dat_files[i]) + "new.dat"
         one_path = checkpath + "/" + one_dat
+        if "_" not in one_dat:
+            continue
         if not os.path.exists(one_path):
             to_clean.append(dat_files[i])
 

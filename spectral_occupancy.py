@@ -14,6 +14,8 @@ from astroplan import Observer
 from astroplan.plots import plot_sky
 import re
 
+figsize = (10,5)
+
 def band_edges(GBT_band):
     """
     Returns the edge frequencies of the Green Bank Telescope
@@ -322,7 +324,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     # calculate the histograms for the unspliced .dat files
     bad_cadence_flag = False
     for obs in unique_unspliced_observations:
-        good_nodes, bad_cadence_flag = getGoodNodes(obs, GBT_band, bad_cadence_flag, outdir=outdir)
+        good_nodes, bad_cadence_flag = getGoodNodes(obs, GBT_band, bad_cadence_flag, outdir=outdir, title_addition=title_addition)
         if type(good_nodes) == int:
             continue
         hist, bin_edges, mjd = calculate_hist(good_nodes[0], GBT_band, bin_width)
@@ -443,7 +445,7 @@ def get_unique_observations(df):
         unique_observations.append(unique_paths)
     return unique_observations
 
-def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
+def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False, title_addition=""):
     """
     records metadata about a flagged bad cadence to a csv file
 
@@ -465,7 +467,10 @@ def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
         A True flag will skip the writing of a new csv header, and will go
         straight to writing the metadata
     """
-    csv_path = outdir + "%sband_bad_cadences.csv"%band.lower()
+    if title_addition == "":
+        csv_path = outdir + "/%sband_bad_cadences.csv"%(band.lower())
+    else:
+        csv_path = outdir + "/%sband_bad_cadences_%s.csv"%(band.lower(), title_addition.replace(" ", "_"))
     print("bad cadence")
     print("recording to: " + csv_path)
     uqnodes = sorted(np.unique(nodes))
@@ -498,7 +503,7 @@ def record_bad_cadence(first_dat, band, nodes, outdir=".", alread_called=False):
             f.write(uqnodes[i] + " ")
         f.write("\n")
     
-def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
+def getGoodNodes(datfiles, band, bad_cadence_flag, outdir=".", title_addition=""):
     """
     Credit to Noah Franz for writing the original 
     algorithm in https://github.com/noahfranz13/BL-TESSsearch/blob/main/analysis/hit_analysis.ipynb
@@ -554,7 +559,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     return datfiles, bad_cadence_flag
                 else:
                     print(f'There are {len(nodes)} nodes, not 8 as L-Band requires')
-                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag, title_addition=title_addition)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag 
         elif band == 'S':
@@ -572,7 +577,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     return datfiles, bad_cadence_flag
                 else:
                     print(f'There are {len(nodes)} nodes, not 8 as S-Band requires')
-                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag, title_addition=title_addition)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
         elif band == 'C':
@@ -591,7 +596,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     return np.delete(datfiles, i_to_rm), bad_cadence_flag
                 else:
                     print(f'There are {len(nodes)} nodes, not 32 as C-Band requires')
-                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag, title_addition=title_addition)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
         elif band == 'X':
@@ -610,7 +615,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir="."):
                     return np.delete(datfiles, i_to_rm), bad_cadence_flag
                 else:
                     print(f'There are {len(nodes)} nodes, not 24 as X-Band requires')
-                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag)
+                    record_bad_cadence(datfiles[0], band, nodes, outdir, bad_cadence_flag, title_addition=title_addition)
                     bad_cadence_flag = True
                     return -9999, bad_cadence_flag
         else:
@@ -696,7 +701,6 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
     
     # check to sort histograms by mjd
     if times is not None:
-        # hist = [x for _,x in sorted(zip(times,hist))]
         temp = pd.DataFrame({"time":times, "data":hist})
         sorted = temp.sort_values(by="time")
         hist = sorted["data"].values
@@ -769,6 +773,17 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         else:
             plt.savefig(outdir + "X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
 
+def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""):
+    off_hist[off_hist == 0] = np.nan
+    ratio = on_hist/off_hist
+
+    plt.figure(figsize=figsize)
+    plt.plot(bin_edges[:-1], ratio)
+    plt.xlabel("Frequency [MHz]")
+    plt.ylabel("ratio")
+    plt.title("%s Band spectral occupancy ratio of %s / remaining"%(band, title_addition))
+    plt.savefig(outdir + "/%s_band_ratio_%s.pdf"%(band, title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+
 def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_time):
     on_mask = np.where((df["hour (UTC - 5)"] >= lower_time) & (df["hour (UTC - 5)"] <= upper_time))
     off_mask = np.where((df["hour (UTC - 5)"] < lower_time) | (df["hour (UTC - 5)"] > upper_time))
@@ -782,15 +797,17 @@ def split_data(band, df, outdir, width, notch_filter, save, lower_time, upper_ti
     plot_AltAz(on_df, plot_color=on_color, label=on_title_addition)
     plot_AltAz(off_df, plot_color=off_color, label=off_title_addition)
     plt.legend(loc="upper right", bbox_to_anchor=(0.3,0))
-    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s_%s.pdf"%(band, lower_time, upper_time), bbox_inches="tight", transparent=False)
+    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
     plt.close("all")
 
-    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir + "/" + on_title_addition.replace(" ", "_"), title_addition=on_title_addition)
-    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir + "/" + off_title_addition.replace(" ", "_"), title_addition=off_title_addition)
+    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
+    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
+
+    plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition)
 
     print("Saving plot...",end="")
     
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=figsize)
     width = np.diff(bin_edges)[0]
 
     plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5)
@@ -857,7 +874,7 @@ if __name__ == "__main__":
                 pickle.dump(to_save, f)
 
         print("Saving plot...",end="")
-        plt.figure(figsize=(10,5))
+        plt.figure(figsize=figsize)
         width = np.diff(bin_edges)[0]
         plt.bar(bin_edges[:-1], prob_hist, width=width)
         plt.xlabel("Frequency [Mhz]")

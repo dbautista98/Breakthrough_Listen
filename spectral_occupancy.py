@@ -643,8 +643,9 @@ def plot_AltAz(df, plot_color="#1f77b4", label=""):
     targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
     times = Time(np.array(df["MJD"].values, dtype=float), format="mjd")
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
-   
-    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":0.1})
+
+    opacity = min(1, 2000/len(df))
+    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity})
 
 def get_AltAz(df):
     """
@@ -721,9 +722,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("L band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band ==  "S":
         plt.figure(figsize=(15,3))
@@ -737,9 +738,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("S band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "C":
         plt.figure(figsize=(15,3))
@@ -753,9 +754,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("C band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
     
     if band == "X":
         plt.figure(figsize=(15,3))
@@ -769,9 +770,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
         plt.xlabel("Frequency [MHz]")
         plt.title("X band hit counts %s"%title_addition)
         if title_addition != "":
-            plt.savefig(outdir + "X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         else:
-            plt.savefig(outdir + "X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
 
 def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""):
     off_hist[off_hist == 0] = np.nan
@@ -808,8 +809,8 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     plt.figure(figsize=figsize)
     width = np.diff(bin_edges)[0]
 
-    plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5)
-    plt.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5)
+    plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5, color=on_color)
+    plt.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5, color=off_color)
 
     plt.xlabel("Frequency [Mhz]")
     plt.ylabel("Fraction with Hits")

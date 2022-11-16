@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("-folder", "-f", help="directory .dat files are held in")
     parser.add_argument("-text", "-t", help="a .txt file to read the filepaths of the .dat files", action=None)
-    parser.add_argument("-outdir", '-o', help="directory to save results output results to")
+    parser.add_argument("-outdir", '-o', help="directory to save results output results to", default=os.getcwd())
     args = parser.parse_args()
 
     # grab spectral occupancy data paths and sort bands

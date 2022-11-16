@@ -797,6 +797,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     plot_AltAz(off_df, plot_color=off_color, label=off_title_addition)
     plt.legend(loc="upper right", bbox_to_anchor=(0.3,0))
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
     plt.close("all")
 
     bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
@@ -877,6 +878,7 @@ if __name__ == "__main__":
     if not args.no_default:
         plot_AltAz(df)
         plt.savefig(args.outdir + "/%s_band_GBT_alt_az.pdf"%(args.band), bbox_inches="tight", transparent=False)
+        plt.savefig(args.outdir + "/%s_band_GBT_alt_az.png"%(args.band), bbox_inches="tight", transparent=False)
         plt.close("all")
 
         bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)

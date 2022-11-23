@@ -624,7 +624,7 @@ def getGoodNodes(datfiles, band, bad_cadence_flag, outdir=".", title_addition=""
         print('This file is already spliced, returning all files')
         return datfiles, bad_cadence_flag
 
-def plot_AltAz(df, plot_color="#1f77b4", label=""):
+def plot_AltAz(df, plot_color="#1f77b4", label="", ax=None):
     """
     plots the altitude and azimuth of the given observations
 
@@ -645,7 +645,7 @@ def plot_AltAz(df, plot_color="#1f77b4", label=""):
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
 
     opacity = min(1, 2000/len(df))
-    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity})
+    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity}, ax=ax)
 
 def get_AltAz(df):
     """
@@ -793,8 +793,8 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     on_color = "orange"
     off_color = '#1f77b4'
 
-    plot_AltAz(on_df, plot_color=on_color, label=on_title_addition)
-    plot_AltAz(off_df, plot_color=off_color, label=off_title_addition)
+    altaz_ax = plot_AltAz(on_df, plot_color=on_color, label=on_title_addition)
+    plot_AltAz(off_df, plot_color=off_color, label=off_title_addition, ax=altaz_ax)
     plt.legend(loc="upper right", bbox_to_anchor=(0.3,0))
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)

@@ -713,6 +713,8 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None)
     if ax == None:
         fig = plt.figure(figsize=(15,3))
         ax = plt.gca()
+    else:
+        fig = plt.gcf()
 
     if band == "L":
         im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
@@ -789,16 +791,24 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None)
 
     return ax
 
-def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""):
+def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition="", ax=None):
     off_hist[off_hist == 0] = np.nan
     ratio = on_hist/off_hist
 
-    plt.figure(figsize=figsize)
-    plt.plot(bin_edges[:-1], ratio)
-    plt.xlabel("Frequency [MHz]")
-    plt.ylabel("ratio")
-    plt.title("%s Band spectral occupancy ratio of %s / remaining"%(band, title_addition))
-    plt.savefig(outdir + "/%s_band_ratio_%s.pdf"%(band, title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+    if ax == None:
+        fig = plt.figure(figsize=figsize)
+        ax = plt.gca()
+    else:
+        fig = plt.gcf()
+
+    ax.plot(bin_edges[:-1], ratio)
+    ax.set_xlabel("Frequency [MHz]")
+    ax.set_ylabel("ratio")
+    ax.set_title("%s Band spectral occupancy ratio of %s / remaining"%(band, title_addition))
+    extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
+    plt.savefig(outdir + "/%s_band_ratio_%s.pdf"%(band, title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
+
+    return ax
 
 def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, lower, upper, split_type):
     on_df = df.iloc[on_mask]
@@ -811,10 +821,30 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     # define all plot parameters
     fig = plt.figure()
 
-    xmin, ymin = 0, 0
+    xmin, ymin = 0.0, 0.15
     square = 0.65
+    heatmap_width = 2 
+    heatmap_height = 0.3
+    heatmap1_start_x = xmin + 0.7
+    heatmap1_start_y = ymin
+    heatmap2_start_x = heatmap1_start_x
+    heatmap2_start_y = heatmap1_start_y + heatmap_height + 0.2
+    ratio_x, ratio_y = xmin, ymin  - heatmap_height - 1.2
+    ratio_height, ratio_width = 2.5/2, 2.5
+    occupancy_x, occupancy_y = xmin, ymin - heatmap_height - ratio_height - 1.5
 
     rect_altaz = [xmin, ymin, square, square]
+    rect_heatmap1 = [heatmap1_start_x, heatmap1_start_y, heatmap_width, heatmap_height]
+    rect_heatmap2 = [heatmap2_start_x, heatmap2_start_y, heatmap_width, heatmap_height]
+    rect_ratio = [ratio_x, ratio_y, ratio_width, ratio_height]
+    rect_occupancy = [occupancy_x, occupancy_y, ratio_width, ratio_height]
+
+    # plot heatmap
+    on_heatmap_ax = fig.add_axes(rect_heatmap1)
+    bin_edges, on_prob_hist, n_observations_on, on_heatmap_ax = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition, ax=on_heatmap_ax)
+    
+    off_heatmap_ax = fig.add_axes(rect_heatmap2)
+    bin_edges, off_prob_hist, n_observations_off, off_heatmap_ax = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition, ax=off_heatmap_ax)
 
     # plot altaz
     altaz_ax = plt.gcf().add_axes(rect_altaz, projection='polar')
@@ -825,29 +855,31 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
-    # plot heatmap
-    bin_edges, on_prob_hist, n_observations_on, on_heatmap_ax = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
-    bin_edges, off_prob_hist, n_observations_off, off_heatmap_ax = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
-
     # plot ratio
-    plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition)
+    ratio_ax = fig.add_axes(rect_ratio)
+    ratio_ax = plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition, ax=ratio_ax)
 
     print("Saving plot...",end="")
-    
-    plt.figure(figsize=figsize)
     width = np.diff(bin_edges)[0]
 
     # plot spectral occupancy
-    plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5, color=on_color)
-    plt.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5, color=off_color)
+    occupancy_ax = fig.add_axes(rect_occupancy)
+    occupancy_ax.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5, color=on_color)
+    occupancy_ax.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5, color=off_color)
 
-    plt.xlabel("Frequency [Mhz]")
-    plt.ylabel("Fraction with Hits")
-    plt.title("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
-    plt.legend()
-    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches="tight", transparent=False)
-    plt.close("all")
-    print("Done")
+    occupancy_ax.set_xlabel("Frequency [Mhz]")
+    occupancy_ax.set_ylabel("Fraction with Hits")
+    occupancy_ax.set_title("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
+    occupancy_ax.legend()
+    extent = occupancy_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches=extent, transparent=False)
+
+    fig.suptitle("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
+    
+
+    print("Saving plot...", end="")
+    fig.savefig(outdir + "/%s_band_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches="tight")
+    print("Done.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

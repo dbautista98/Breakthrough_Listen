@@ -825,13 +825,13 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     square = 0.65
     heatmap_width = 2 
     heatmap_height = 0.3
-    heatmap1_start_x = xmin + 0.7
+    heatmap1_start_x = xmin + 0.71
     heatmap1_start_y = ymin
     heatmap2_start_x = heatmap1_start_x
     heatmap2_start_y = heatmap1_start_y + heatmap_height + 0.2
     ratio_x, ratio_y = xmin, ymin  - heatmap_height - 1.2
     ratio_height, ratio_width = 2.5/2, 2.5
-    occupancy_x, occupancy_y = xmin, ymin - heatmap_height - ratio_height - 1.5
+    occupancy_x, occupancy_y = xmin, ymin + heatmap_height + ratio_height - 0.5
 
     rect_altaz = [xmin, ymin, square, square]
     rect_heatmap1 = [heatmap1_start_x, heatmap1_start_y, heatmap_width, heatmap_height]
@@ -840,10 +840,10 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     rect_occupancy = [occupancy_x, occupancy_y, ratio_width, ratio_height]
 
     # plot heatmap
-    on_heatmap_ax = fig.add_axes(rect_heatmap1)
+    on_heatmap_ax = fig.add_axes(rect_heatmap2)
     bin_edges, on_prob_hist, n_observations_on, on_heatmap_ax = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition, ax=on_heatmap_ax)
     
-    off_heatmap_ax = fig.add_axes(rect_heatmap2)
+    off_heatmap_ax = fig.add_axes(rect_heatmap1)
     bin_edges, off_prob_hist, n_observations_off, off_heatmap_ax = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition, ax=off_heatmap_ax)
 
     # plot altaz
@@ -851,7 +851,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     altaz_ax = plot_AltAz(on_df, plot_color=on_color, label=on_title_addition, ax=altaz_ax)
     altaz_ax = plot_AltAz(off_df, plot_color=off_color, label=off_title_addition, ax=altaz_ax)
     altaz_ax.legend(bbox_to_anchor=(0.3,0)) # sanity check what this sets later
-    extent = altaz_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.4)
+    extent = altaz_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.0, 1.4)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
@@ -873,9 +873,6 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     occupancy_ax.legend()
     extent = occupancy_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
     plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches=extent, transparent=False)
-
-    fig.suptitle("%s Band Spectral Occupancy\nn=%s observations between %s\nn=%s observations between %s"%(band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
-    
 
     print("Saving plot...", end="")
     fig.savefig(outdir + "/%s_band_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches="tight")

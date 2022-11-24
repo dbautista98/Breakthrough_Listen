@@ -792,8 +792,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None)
     return ax
 
 def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition="", ax=None):
-    off_hist[off_hist == 0] = np.nan
-    ratio = on_hist/off_hist
+    off_hist_copy = np.copy(off_hist)
+    off_hist_copy[off_hist_copy == 0] = np.nan
+    ratio = on_hist/off_hist_copy
 
     if ax == None:
         fig = plt.figure(figsize=figsize)

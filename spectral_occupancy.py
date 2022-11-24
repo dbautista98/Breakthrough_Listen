@@ -274,7 +274,7 @@ def calculate_hist(dat_file, GBT_band, bin_width=1, tbl=None):
         hist, bin_edges = np.histogram(tbl["Freq"], bins=bins)
     return hist, bin_edges, mjd
 
-def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir=".", title_addition=""):
+def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, outdir=".", title_addition="", ax=None):
     """
     Takes in a list of .dat files and makes a true/false table of hits in a frequency bin
     
@@ -336,7 +336,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     print("Done.")  
 
     # plot heatmap
-    plot_heatmap(histograms, GBT_band, outdir=outdir, times=mjds, title_addition=title_addition)
+    heatmap_ax = plot_heatmap(histograms, GBT_band, outdir=outdir, times=mjds, title_addition=title_addition, ax=ax)
     
     # define the upper and lower bounds of the band
     min_freq = np.min(bin_edges)
@@ -374,7 +374,7 @@ def calculate_proportion(file_list, GBT_band, notch_filter=False, bin_width=1, o
     for label in data_labels:
         total = total + df[label].values
     
-    return bin_edges, total/len(histograms), len(histograms)
+    return bin_edges, total/len(histograms), len(histograms), heatmap_ax
 
 def spliced_unspliced_split(dat_files):
     """
@@ -679,7 +679,7 @@ def get_AltAz(df):
 
     return ALT, AZ
 
-def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
+def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None):
     """
     takes a set of histograms and plots them 
     as an image, with the horizontal axis showing
@@ -710,70 +710,84 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition=""):
     
     hist = np.log10(np.asarray(hist)+1)
 
+    if ax == None:
+        fig = plt.figure(figsize=(15,3))
+        ax = plt.gca()
+
     if band == "L":
-        plt.figure(figsize=(15,3))
-        plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="log(hit count)")
+        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel("log(hit count)")
 
         freqs = np.arange(1100, 1900.1)
         # ticks = np.linspace(1100, 1900, num=n_ticks)
         ticks = np.asarray([1100, 1200, 1300, 1380, 1420, 1500, 1600, 1700, 1800, 1900])
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
-        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
-        plt.xlabel("Frequency [MHz]")
-        plt.title("L band hit counts %s"%title_addition)
+        ax.set_xticks(ticks=indices)
+        ax.set_xticklabels(freqs[indices].astype(int))
+        ax.set_xlabel("Frequency [MHz]")
+        ax.set_title("L band hit counts %s"%title_addition)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
-            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
-            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/L_band_heatmap%s.pdf"%(title_addition), bbox_inches=extent, transparent=False)
     
     if band ==  "S":
-        plt.figure(figsize=(15,3))
-        plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="log(hit count)")
+        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel("log(hit count)")
 
         freqs = np.arange(1800, 2800.1)
         ticks = np.arange(1800, 2800.1, 100)
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
-        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
-        plt.xlabel("Frequency [MHz]")
-        plt.title("S band hit counts %s"%title_addition)
+        ax.set_xticks(ticks=indices)
+        ax.set_xticklabels(freqs[indices].astype(int))
+        ax.set_xlabel("Frequency [MHz]")
+        ax.set_title("S band hit counts %s"%title_addition)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
-            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
-            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/S_band_heatmap%s.pdf"%(title_addition), bbox_inches=extent, transparent=False)
     
     if band == "C":
-        plt.figure(figsize=(15,3))
-        plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="log(hit count)")
+        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel("log(hit count)")
 
         freqs = np.arange(4000, 7800.1)
         ticks = np.asarray([4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 7800])
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
-        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
-        plt.xlabel("Frequency [MHz]")
-        plt.title("C band hit counts %s"%title_addition)
+        ax.set_xticks(ticks=indices)
+        ax.set_xticklabels(freqs[indices].astype(int))
+        ax.set_xlabel("Frequency [MHz]")
+        ax.set_title("S band hit counts %s"%title_addition)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
-            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
-            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/C_band_heatmap%s.pdf"%(title_addition), bbox_inches=extent, transparent=False)
     
     if band == "X":
-        plt.figure(figsize=(15,3))
-        plt.imshow(hist, cmap="viridis_r", aspect="auto")
-        plt.colorbar(label="log(hit count)")
+        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel("log(hit count)")
 
         freqs = np.arange(7800, 11200.1)
         ticks = np.append(np.arange(7800, 11200.1, 500), 11200)
         indices = (np.where(np.in1d(freqs, ticks) == True)[0])
-        plt.xticks(ticks=indices, labels=freqs[indices].astype(int))
-        plt.xlabel("Frequency [MHz]")
-        plt.title("X band hit counts %s"%title_addition)
+        ax.set_xticks(ticks=indices)
+        ax.set_xticklabels(freqs[indices].astype(int))
+        ax.set_xlabel("Frequency [MHz]")
+        ax.set_title("S band hit counts %s"%title_addition)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
-            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
-            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches="tight", transparent=False)
+            plt.savefig(outdir + "/X_band_heatmap%s.pdf"%(title_addition), bbox_inches=extent, transparent=False)
+
+    return ax
 
 def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""):
     off_hist[off_hist == 0] = np.nan
@@ -812,8 +826,8 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
     # plot heatmap
-    bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
-    bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
+    bin_edges, on_prob_hist, n_observations_on, on_heatmap_ax = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
+    bin_edges, off_prob_hist, n_observations_off, off_heatmap_ax = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
 
     # plot ratio
     plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition)

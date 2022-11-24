@@ -645,7 +645,8 @@ def plot_AltAz(df, plot_color="#1f77b4", label="", ax=None):
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
 
     opacity = min(1, 2000/len(df))
-    plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity}, ax=ax)
+    axes = plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity}, ax=ax)
+    return axes
 
 def get_AltAz(df):
     """
@@ -793,16 +794,28 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     on_color = "orange"
     off_color = '#1f77b4'
 
-    altaz_ax = plot_AltAz(on_df, plot_color=on_color, label=on_title_addition)
-    plot_AltAz(off_df, plot_color=off_color, label=off_title_addition, ax=altaz_ax)
-    plt.legend(loc="upper right", bbox_to_anchor=(0.3,0))
-    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
-    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
-    plt.close("all")
+    # define all plot parameters
+    fig = plt.figure()
 
+    xmin, ymin = 0, 0
+    square = 0.65
+
+    rect_altaz = [xmin, ymin, square, square]
+
+    # plot altaz
+    altaz_ax = plt.gcf().add_axes(rect_altaz, projection='polar')
+    altaz_ax = plot_AltAz(on_df, plot_color=on_color, label=on_title_addition, ax=altaz_ax)
+    altaz_ax = plot_AltAz(off_df, plot_color=off_color, label=off_title_addition, ax=altaz_ax)
+    altaz_ax.legend(bbox_to_anchor=(0.3,0)) # sanity check what this sets later
+    extent = altaz_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.4)
+    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
+    plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
+
+    # plot heatmap
     bin_edges, on_prob_hist, n_observations_on = calculate_proportion(on_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=on_title_addition)
     bin_edges, off_prob_hist, n_observations_off = calculate_proportion(off_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=off_title_addition)
 
+    # plot ratio
     plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition)
 
     print("Saving plot...",end="")
@@ -810,6 +823,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     plt.figure(figsize=figsize)
     width = np.diff(bin_edges)[0]
 
+    # plot spectral occupancy
     plt.plot(bin_edges[:-1], on_prob_hist, label=on_title_addition, linewidth=1, alpha=0.5, color=on_color)
     plt.plot(bin_edges[:-1], off_prob_hist, label=off_title_addition, linewidth=1, alpha=0.5, color=off_color)
 

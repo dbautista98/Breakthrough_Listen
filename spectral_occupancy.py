@@ -939,7 +939,7 @@ if __name__ == "__main__":
         plt.savefig(args.outdir + "/%s_band_GBT_alt_az.png"%(args.band), bbox_inches="tight", transparent=False)
         plt.close("all")
 
-        bin_edges, prob_hist, n_observations = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
+        bin_edges, prob_hist, n_observations, ax = calculate_proportion(dat_files, bin_width=args.width, GBT_band=args.band, notch_filter=args.notch_filter, outdir=args.outdir)
         
         if args.save:
             print("Saving histogram data")

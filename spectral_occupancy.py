@@ -764,7 +764,7 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None)
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
-        ax.set_title("S band hit counts %s"%title_addition)
+        ax.set_title("C band hit counts %s"%title_addition)
         extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
             plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
@@ -782,7 +782,7 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None)
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
-        ax.set_title("S band hit counts %s"%title_addition)
+        ax.set_title("X band hit counts %s"%title_addition)
         extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
         if title_addition != "":
             plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
@@ -878,6 +878,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     print("Saving plot...", end="")
     fig.savefig(outdir + "/%s_band_split_%s_%s_%s.pdf"%(band, split_type, lower, upper), bbox_inches="tight")
     print("Done.")
+    plt.close("all")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")

@@ -852,7 +852,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     altaz_ax = plot_AltAz(on_df, plot_color=on_color, label=on_title_addition, ax=altaz_ax)
     altaz_ax = plot_AltAz(off_df, plot_color=off_color, label=off_title_addition, ax=altaz_ax)
     altaz_ax.legend(bbox_to_anchor=(0.3,0)) # sanity check what this sets later
-    extent = altaz_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.0, 1.4)
+    extent = altaz_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.pdf"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
     plt.savefig(outdir + "/%s_band_GBT_alt_az_split_%s.png"%(band, on_title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
@@ -860,7 +860,6 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     ratio_ax = fig.add_axes(rect_ratio)
     ratio_ax = plot_ratio(on_prob_hist, off_prob_hist, bin_edges, band=band, outdir=outdir, title_addition=on_title_addition, ax=ratio_ax)
 
-    print("Saving plot...",end="")
     width = np.diff(bin_edges)[0]
 
     # plot spectral occupancy

@@ -644,7 +644,7 @@ def plot_AltAz(df, plot_color="#1f77b4", label="", ax=None):
     times = Time(np.array(df["MJD"].values, dtype=float), format="mjd")
     GBT = Observer.at_site("GBT", timezone="US/Eastern")
 
-    opacity = min(1, 2000/len(df))
+    opacity = min(1, 8000/len(df))
     axes = plot_sky(targets, GBT, times, style_kwargs={"s":2, "c":plot_color, "label":label, "alpha":opacity}, ax=ax)
     return axes
 
@@ -815,7 +815,10 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     on_df = df.iloc[on_mask]
     off_df = df.iloc[off_mask]
     on_title_addition = "%s %s to %s"%(split_type, lower, upper)
-    off_title_addition = "%s %s to %s"%(split_type, upper, lower)
+    if split_type == "altitude":
+        off_title_addition = "%s %s to %s"%(split_type, upper, 90)
+    else:
+        off_title_addition = "%s %s to %s"%(split_type, upper, lower)
     on_color = "orange"
     off_color = '#1f77b4'
 

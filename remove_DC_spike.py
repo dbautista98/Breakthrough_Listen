@@ -70,9 +70,11 @@ def grab_parameters(dat_file, GBT_band, outdir):
         DEC = hits[4].strip().split('\t')[2].split(':')[-1].strip()
         alt, az = get_AltAz(RA, DEC, MJD)
         # extract hour of day from MJD and record to csv
-        hour = Time(MJD, format="mjd").datetime.hour - 5 # adjust time zone from UTC to eastern (UTC-5)
+        time_var = Time(MJD, format="mjd")
+        hour = time_var.datetime.hour - 5 # adjust time zone from UTC to eastern (UTC-5)
+        year = time_var.datetime.year
         with open(outdir + "/locations.csv", "a") as f:
-            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + str(hour) + "," + filepath + "\n")
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + str(hour) + "," + str(year) + "," + filepath + "," + dat_file + "\n")
         return -9999, -9999, -9999, -9999
     else:
         RA = tbl["RA"].values[0]
@@ -80,9 +82,11 @@ def grab_parameters(dat_file, GBT_band, outdir):
         MJD = tbl["MJD"].values[0]
         alt, az = get_AltAz(RA, DEC, MJD)
         # extract hour of day from MJD and record to csv
-        hour = Time(MJD, format="mjd").datetime.hour
+        time_var = Time(MJD, format="mjd")
+        hour = time_var.datetime.hour
+        year = time_var.datetime.year
         with open(outdir + "/locations.csv", "a") as f:
-            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + str(hour) + "," + filepath + "\n")
+            f.write(str(RA) + "," + str(DEC) + "," + str(MJD) + "," + str(alt) + "," + str(az) + "," + str(hour) + "," + str(year) + "," + filepath + "," + dat_file + "\n")
     
     if GBT_band == "L":
         fch1 = 2251.46484375 # LBAND  --  based on the fch1 values from Table 6 of Lebofsky et al 2019
@@ -195,7 +199,7 @@ def remove_DC_spike(dat_file, outdir, GBT_band):
         the number of course channels in a frequency band. The 
         default is 512
     """
-    csv_header = "RA,DEC,MJD,ALT,AZ,hour (UTC - 5),filepath\n"
+    csv_header = "RA,DEC,MJD,ALT,AZ,hour (UTC - 5),year,filepath,origin\n"
     if not os.path.exists(outdir + "/locations.csv"):
         with open(outdir + "/locations.csv", "w") as f:
             f.write(csv_header)

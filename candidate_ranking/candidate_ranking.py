@@ -47,14 +47,6 @@ def combine_frames(hit_list):
         df = df.append(temp_df, ignore_index=True)
     return df
 
-# def combine_dats(dat_list):
-#     df = pd.DataFrame()
-#     print("reading data")
-#     for i in trange(len(dat_list)):
-#         temp_df = find.read_dat(dat_list[i])
-#         df = df.append(temp_df, ignore_index=True)
-#     return df
-
 def rank_candidates(hit_freq, occupancy_dict):
     bin_edges = occupancy_dict["bin_edges"][:-1]
     occupancy = occupancy_dict["bin_heights"]
@@ -72,21 +64,25 @@ def rank_candidates(hit_freq, occupancy_dict):
             rankings[i] = 0
     return rankings
 
-def make_plots(band_df, occupancy_dict, band, save_dir, bins=50):
-    band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
-    
-    plt.figure()
+def make_plots(band_df, band_rankings, band, save_dir, bins=50, grid_sky=False):
+    # band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
+    if grid_sky:
+        grid_str = " grid sky"
+    else:
+        grid_str = " all sky"
+
+    plt.figure(figsize=(10,5))
     _ = plt.hist(band_rankings, bins=bins)
     plt.xlabel("ranking")
     plt.ylabel("count")
     plt.title("%s-band Rankings\nN = %s candidate hits\nn = %s unique events"%(band, len(band_rankings), len(np.unique(band_df["Hit_ID"]))))
     plt.xlim([-0.05,1.05])
-    plt.savefig(save_dir + "/%sband_ranking.png"%band.lower(), bbox_inches="tight", transparent=False)
-    plt.savefig(save_dir + "/%sband_ranking.pdf"%band.lower(), bbox_inches="tight", transparent=False)
+    plt.savefig(save_dir + "/%sband_ranking%s.png"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
+    plt.savefig(save_dir + "/%sband_ranking%s.pdf"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
     
-    band_df.insert(0, "ranking", band_rankings)
-    band_df.to_csv(save_dir + "/%s_band_candidate_rankings.csv"%band, index=False)
-    return band_df
+    # band_df.insert(0, "ranking", band_rankings)
+    # band_df.to_csv(save_dir + "/%s_band_candidate_rankings.csv"%band, index=False)
+    # return band_df
 
 def notch_filter(band, occupancy_dict):
     if band == "C" or band == "X":
@@ -101,10 +97,14 @@ def notch_filter(band, occupancy_dict):
         raise Exception("invalid band")
     return occupancy_dict
 
-def make_scatter(band_df, occupancy_dict, band, save_dir):
-    band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
-    
-    plt.figure()
+def make_scatter(band_df, band_rankings, band, save_dir, grid_sky=False):
+    # band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
+    if grid_sky:
+        grid_str = " grid sky"
+    else:
+        grid_str = " all sky"
+
+    plt.figure(figsize=(10,5))
     plt.scatter(band_df["Freq"].values, band_rankings, s=2)
     plt.xlabel("Frequency [MHz]")
     plt.ylabel("ranking")
@@ -114,11 +114,11 @@ def make_scatter(band_df, occupancy_dict, band, save_dir):
     if band == "S":
         plt.axvspan(2300, 2360, alpha=0.5, color='red', label="notch filter region")
         plt.legend()
-    plt.title("%s-band ranking vs frequency\nN = %s candidate hits\nn = %s unique events"%(band, len(band_rankings), len(np.unique(band_df["Hit_ID"]))))
+    plt.title("%s-band ranking vs frequency%s\nN = %s candidate hits\nn = %s unique events"%(band, grid_str, len(band_rankings), len(np.unique(band_df["Hit_ID"]))))
     plt.ylim([-0.05,1.05])
     plt.grid()
-    plt.savefig(save_dir + "/%sband_freq_vs_ranking.png"%band.lower(), bbox_inches="tight", transparent=False)
-    plt.savefig(save_dir + "/%sband_freq_vs_ranking.pdf"%band.lower(), bbox_inches="tight", transparent=False)
+    plt.savefig(save_dir + "/%sband_freq_vs_ranking%s.png"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
+    plt.savefig(save_dir + "/%sband_freq_vs_ranking%s.pdf"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
 
 def freq_mask(eventdf, band):
     """
@@ -127,12 +127,7 @@ def freq_mask(eventdf, band):
     of the spectrum
     """
     efreqs = pd.to_numeric(eventdf.Freq)
-    # dfreqs = pd.to_numeric(datdf.Freq)
 
-    # datmaskL = (datdf.Band=='L') & (dfreqs/1000>1.10) & (dfreqs/1000<1.90) &  ((dfreqs/1000 < 1.20) | (dfreqs/1000 > 1.34))
-    # datmaskS = (datdf.Band=='S') & ((dfreqs/1000>1.80) & (dfreqs/1000<2.80)) & ((dfreqs/1000 < 2.30) | (dfreqs/1000 > 2.36))
-    # datmaskC = (datdf.Band=='C') & ((dfreqs/1000>4.00) & (dfreqs/1000<7.80))
-    # datmaskX = (datdf.Band=='X') & ((dfreqs/1000>7.80) & (dfreqs/1000<11.20))
     if band == "L":
         eventmask = (efreqs/1000>1.10) & (efreqs/1000<1.90) &  ((efreqs/1000 < 1.20) | (efreqs/1000 > 1.34))
     elif band == "S":
@@ -148,7 +143,97 @@ def freq_mask(eventdf, band):
     eventdf = eventdf[eventmask]
 
     return eventdf
-    
+
+def get_AltAz(df):
+    """
+    Takes a dataframe containing the RA, DEC and MJD values 
+    and returns the altitude and azimuth angles the telescope
+    was pointing during the observation
+
+    Arguments
+    ----------
+    df : pandas.core.frame.DataFrame
+        DataFrame containing right ascension (RA), declinaiton (DEC)
+        and modified julian date (MJD) values for each observation
+
+    Returns
+    --------
+    ALT : astropy.coordinates.angles.Latitude
+        The altidude angle of the telescope; how many degrees above the horizon
+        the telescope was pointing
+    AZ : astropy.coordinates.angles.Longitude
+        the azimuthal angle the telescope was pointing; how many degrees from 
+        true north it was aimed, following the right hand rule
+    """
+    targets = SkyCoord(df["RA"].values, df["DEC"].values, unit=(u.hourangle, u.deg), frame="icrs")          
+    times = Time(np.array(df["MJD"].values, dtype=float), format="mjd") 
+    gbt = EarthLocation(lat=38.4*u.deg, lon=-79.8*u.deg, height=808*u.m)
+    gbt_altaz_transformer = AltAz(obstime=times, location=gbt)
+    gbt_target_altaz = targets.transform_to(gbt_altaz_transformer)
+    ALT = gbt_target_altaz.alt
+    AZ = gbt_target_altaz.az
+
+    return ALT, AZ
+
+def all_sky_rank(df, band, outdir="./"):
+    # grab spectral occupancy data paths and sort bands
+    spectral_occupancy = glob.glob("all_sky/*.pkl")
+    spectral_occupancy.sort()
+
+    if len(spectral_occupancy) == 0:
+        raise Exception("no pickles")
+
+    # read the spectral occupancy data into memory
+    if band.upper() == "L":
+        output = read_pickle(spectral_occupancy[1])
+        output = notch_filter("L", output)
+    elif band.upper() == "S":
+        output = read_pickle(spectral_occupancy[2])
+        output = notch_filter("S", output)
+    elif band.upper() == "C":
+        output = read_pickle(spectral_occupancy[0])
+    elif band.upper() == "X":
+        output = read_pickle(spectral_occupancy[3])
+    else:
+        print("Please enter a valid band. Choose from {L, S, C, X}")
+        exit()
+
+    # rank candidates and save plots, csv
+    band_rankings = rank_candidates(band_df["Freq"].values, output)
+
+    make_plots(band_df=band_df, band_rankings=band_rankings, band=args.band, save_dir=outdir)
+    make_scatter(band_df=band_df, band_rankings=band_rankings, band=args.band, save_dir=outdir)
+
+    band_df.insert(0, "ranking", band_rankings)
+    band_df.to_csv(outdir + "/%s_band_candidate_rankings_all_sky.csv"%band, index=False)
+
+def grid_rank(df, band, outdir="./"):
+    alt_bins = np.linspace(0,90,num=4, endpoint=True)
+    az_bins = np.linspace(0,360, num=5, endpoint=True)
+
+    alt, az = get_AltAz(df)
+    df["ALT"] = alt
+    df["AZ"] = az
+
+    rankings_df = pd.DataFrame()
+
+    for i in range(len(alt_bins)-1):
+        for j in range(len(az_bins)-1):
+            mask = np.where((df["ALT"] >= alt_bins[i]) & (df["ALT"] < alt_bins[i+1]) & (df["AZ"] >= az_bins[j]) & (df["AZ"] < az_bins[j+1]))
+            this_df = df.iloc[mask]
+            spectral_occupancy_pickle = glob.glob("grid_sky/*%s_band*alt-(%s,%s)_az-(%s,%s)*pkl"%(band, alt_bins[i], alt_bins[i+1], az_bins[j], az_bins[j+1]))
+            if len(spectral_occupancy_pickle) == 0:
+                raise Exception("no pkl file found")
+            output = read_pickle(spectral_occupancy_pickle[0])
+            output = notch_filter(band, output)
+            this_rankings = rank_candidates(this_df["Freq"].values, output)
+            this_df.insert(0, "ranking", this_rankings)
+            rankings_df = rankings_df.append(this_df, ignore_index=True)
+
+    make_plots(band_df=rankings_df, band_rankings=rankings_df["ranking"].values, band=args.band, save_dir=outdir, grid_sky=True)
+    make_scatter(band_df=rankings_df, band_rankings=rankings_df["ranking"].values, band=args.band, save_dir=outdir, grid_sky=True)
+
+    rankings_df.to_csv(outdir + "/%s_band_candidate_rankings_grid_sky.csv"%band, index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="calculates the weight of interest in a candidate signal that was detected by turboSETI's find event pipeline, note that the present form of the program should be run on a single band's data at a time")
@@ -160,49 +245,21 @@ if __name__ == "__main__":
     parser.add_argument("-grid_ranking", "-g", help="rank candidates based on the region of sky they come from. groups candidates together with other hits from same patch of sky", default=False, action="store_true")
     args = parser.parse_args()
 
-    # grab spectral occupancy data paths and sort bands
-    # if not args.grid_ranking:
-    spectral_occupancy = glob.glob("all_sky/*pkl")
-    spectral_occupancy.sort()
-    # else:
-    #     spectral_occupancy = glob.glob("grid_sky/*.pkl")
-
-    if len(spectral_occupancy) == 0:
-        raise Exception("no pickles")
-
     # grab turboSETI cadence search results 
     if args.folder is not None:
-        # if args.dat:
-        #     paths = glob.glob(args.folder + "/*.dat")
-        #     cadences = combine_dats(paths)
-        # else:
         paths = glob.glob(args.folder + "/*csv")
-        cadences = combine_frames(paths)
+        band_df = combine_frames(paths)
     elif args.text is not None:
         paths = read_txt(args.text)
-        cadences = combine_frames(paths)
+        band_df = combine_frames(paths)
     else:
         print("please enter either a directory path or a txt file containing the paths to the files")
         exit()
 
     # clean spectrum to only include wanted regions
-    cadences = freq_mask(cadences, args.band)
-    
-    # read the spectral occupancy data into memory
-    if args.band.upper() == "L":
-        output = read_pickle(spectral_occupancy[1])
-        output = notch_filter("L", output)
-    elif args.band.upper() == "S":
-        output = read_pickle(spectral_occupancy[2])
-        output = notch_filter("S", output)
-    elif args.band.upper() == "C":
-        output = read_pickle(spectral_occupancy[0])
-    elif args.band.upper() == "X":
-        output = read_pickle(spectral_occupancy[3])
-    else:
-        print("Please enter a valid band. Choose from {L, S, C, X}")
-        exit()
+    band_df = freq_mask(band_df, args.band)
 
-    # rank candidates and save plots, csv
-    make_plots(band_df=cadences, occupancy_dict=output, band=args.band, save_dir=args.outdir)
-    make_scatter(band_df=cadences, occupancy_dict=output, band=args.band, save_dir=args.outdir)
+    if not args.grid_ranking:
+        all_sky_rank(band_df, args.band, args.outdir)
+    else:
+        grid_rank(band_df, args.band, args.outdir)

@@ -887,7 +887,11 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     occupancy_ax.set_xlabel("Frequency [Mhz]")
     occupancy_ax.set_ylabel("Fraction with Hits")
     occupancy_ax.set_title("%s Band Spectral Occupancy%s\nn=%s observations between %s\nn=%s observations between %s"%(zero_drift_str, band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
-    occupancy_ax.legend()
+    if band == "L":
+        occupancy_ax.axvspan(1200, 1341, alpha=0.5, color='red', label="notch filter region")
+    if band == "S":
+        occupancy_ax.axvspan(2300, 2360, alpha=0.5, color='red', label="notch filter region")
+    occupancy_ax.legend(bbox_to_anchor=(0.85,1.7))
     extent = occupancy_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
     plt.savefig(args.outdir + "/%s_band_spectral_occupancy_split_%s_%s_%s%s.pdf"%(band, split_type, lower, upper, zero_drift_str.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
@@ -895,6 +899,59 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
     fig.savefig(outdir + "/%s_band_split_%s_%s_%s%s.pdf"%(band, split_type, lower, upper, zero_drift_str.replace(" ", "_")), bbox_inches="tight")
     print("Done.")
     plt.close("all")
+
+def grid_sky(df, n_alt, n_az, band, width, notch_filter, outdir, exclude_zero_drift=False, save=False):
+    colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan", "black", "yellow"]
+
+    alt_bins = np.linspace(0,90,num=n_alt+1, endpoint=True)
+    az_bins = np.linspace(0,360, num=n_az+1, endpoint=True)
+
+    fig = plt.figure()
+
+    xmin, ymin = 0.0, 0.15
+    heatmap_width, heatmap_height = 2, 0.3
+    occupancy_width, occupancy_height = 2, 0.5
+    heatmap_spacing = 0.55
+
+    occupancy_rect = [xmin, ymin + heatmap_spacing, occupancy_width, occupancy_height]
+    occupancy_ax = fig.add_axes(occupancy_rect)
+
+    zero_drift_str = ""
+    if exclude_zero_drift:
+            zero_drift_str = " no zero drift"
+
+    title_str = "%s Band Spectral Occupancy\n"%band
+
+    count = 0
+    for i in range(len(alt_bins)-1):
+        for j in range(len(az_bins)-1):
+            mask = np.where((df["ALT"] >= alt_bins[i]) & (df["ALT"] < alt_bins[i+1]) & (df["AZ"] >= az_bins[j]) & (df["AZ"] < az_bins[j+1]))
+            this_df = df.iloc[mask]
+            this_heatmap_rect = [xmin, ymin - count*heatmap_spacing, heatmap_width, heatmap_height]
+            this_heatmap_ax = fig.add_axes(this_heatmap_rect)
+            this_title_addition = "alt-(" + str(alt_bins[i]) + ","  + str(alt_bins[i+1]) + ") "  + "az-(" + str(az_bins[j]) + ","  + str(az_bins[j+1]) + ")"
+            bin_edges, prob_hist, n_observations, this_heatmap_ax = calculate_proportion(this_df["filepath"].values, bin_width=width, GBT_band=band, notch_filter=notch_filter, outdir=outdir, title_addition=this_title_addition, ax=this_heatmap_ax, exclude_zero_drift=exclude_zero_drift)
+            if save:
+                print("Saving histogram data")
+                to_save = {"bin_edges":bin_edges, "bin_heights":prob_hist, "band":args.band, "bin width":args.width, "algorithm":"turboSETI", "n files":len(dat_files)}
+                filename = outdir + "/turboSETI_%s_band_spectral_occupancy_%s_%s_MHz_bins.pkl"%(band, this_title_addition.replace(" ", "_"), width)
+                with open(filename, "wb") as f:
+                    pickle.dump(to_save, f)
+            title_str = title_str + "%s observations between "%n_observations + title_addition + this_title_addition + "\n"
+            occupancy_ax.plot(bin_edges[:-1], prob_hist, label=this_title_addition, linewidth=1, alpha=0.5)#, color=colors[count])
+
+            count += 1
+            
+
+    occupancy_ax.set_xlabel("Frequency [Mhz]")
+    occupancy_ax.set_ylabel("Fraction with Hits")
+    occupancy_ax.set_title(title_str)
+    # occupancy_ax.set_title("%s Band Spectral Occupancy%s\nn=%s observations between %s\nn=%s observations between %s"%(zero_drift_str, band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
+    occupancy_ax.legend(bbox_to_anchor=(0.85,1.7))
+    extent = occupancy_ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_%s_%s_%s%s.pdf"%(band, "grid_sky", "N_alt_%s"%n_alt, "N_az_%s"%n_az, zero_drift_str.replace(" ", "_")), bbox_inches=extent, transparent=False)
+
+    plt.savefig(args.outdir + "/%s_band_spectral_occupancy_%s_%s_%s%s.pdf"%(band, "grid_sky_all_heatmaps", "N_alt_%s"%n_alt, "N_az_%s"%n_az, zero_drift_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
@@ -913,6 +970,8 @@ if __name__ == "__main__":
     parser.add_argument("-upper_az", "-uz", help="split the data into two azimuth intervals. this sets the upper azimuth boundary. range is from 0-360 degrees", type=int, default=None)
     parser.add_argument("-no_default", "-no", help="flag to tell program NOT to plot the default spectral occupancy with zero grouping of the data", default=False, action="store_true")
     parser.add_argument("-exclude_zero_drift", "-exclude", help="flag to tell program to exclude hits with a drift rate of zero", default=False, action="store_true")
+    parser.add_argument("-N_altitude_bins", "-na", help="number of bins the split the altitude angle into", type=int,  default=None)
+    parser.add_argument("-N_azimuth_bins", "-nz", help="number of bins to split the azimuth angle into", type=int, default=None)
     args = parser.parse_args()
     
     print("Gathering files...",end="")
@@ -950,6 +1009,9 @@ if __name__ == "__main__":
         on_mask = np.where((df["AZ"] >= args.lower_az) & (df["AZ"] <= args.upper_az))
         off_mask = np.where((df["AZ"] < args.lower_az) | (df["AZ"] > args.upper_az))
         split_data(args.band, df, on_mask, off_mask, args.outdir, args.width, args.notch_filter, args.save, args.lower_az, args.upper_az, split_type="azimuth", exclude_zero_drift=args.exclude_zero_drift)
+    # check if gridding up the sky
+    if (args.N_altitude_bins is not None) and (args.N_azimuth_bins is not None):
+        grid_sky(df, args.N_altitude_bins, args.N_azimuth_bins, args.band, args.width, args.notch_filter, args.outdir, args.exclude_zero_drift, save=args.save)
     # check if plotting in default manner
     if not args.no_default:
         plot_AltAz(df)
@@ -975,6 +1037,12 @@ if __name__ == "__main__":
         plt.bar(bin_edges[:-1], prob_hist, width=width)
         plt.xlabel("Frequency [Mhz]")
         plt.ylabel("Fraction with Hits")
+        if args.band == "L":
+            plt.axvspan(1200, 1341, alpha=0.5, color='red', label="notch filter region")
+            plt.legend()
+        if args.band == "S":
+            plt.axvspan(2300, 2360, alpha=0.5, color='red', label="notch filter region")
+            plt.legend()
         plt.title("Spectral Occupancy%s: n=%s observations"%(title_addition, n_observations))
         plt.savefig(args.outdir + "/%s_band_spectral_occupancy%s.pdf"%(args.band, title_addition.replace(" ", "_")), bbox_inches="tight", transparent=False)
         print("Done")

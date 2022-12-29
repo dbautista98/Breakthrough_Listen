@@ -65,7 +65,6 @@ def rank_candidates(hit_freq, occupancy_dict):
     return rankings
 
 def make_plots(band_df, band_rankings, band, save_dir, bins=50, grid_sky=False):
-    # band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
     if grid_sky:
         grid_str = " grid sky"
     else:
@@ -79,10 +78,6 @@ def make_plots(band_df, band_rankings, band, save_dir, bins=50, grid_sky=False):
     plt.xlim([-0.05,1.05])
     plt.savefig(save_dir + "/%sband_ranking%s.png"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
     plt.savefig(save_dir + "/%sband_ranking%s.pdf"%(band.lower(), grid_str.replace(" ", "_")), bbox_inches="tight", transparent=False)
-    
-    # band_df.insert(0, "ranking", band_rankings)
-    # band_df.to_csv(save_dir + "/%s_band_candidate_rankings.csv"%band, index=False)
-    # return band_df
 
 def notch_filter(band, occupancy_dict):
     if band == "C" or band == "X":
@@ -98,7 +93,6 @@ def notch_filter(band, occupancy_dict):
     return occupancy_dict
 
 def make_scatter(band_df, band_rankings, band, save_dir, grid_sky=False):
-    # band_rankings = rank_candidates(band_df["Freq"].values, occupancy_dict)
     if grid_sky:
         grid_str = " grid sky"
     else:
@@ -139,7 +133,6 @@ def freq_mask(eventdf, band):
     else:
         raise Exception("invalid band")
 
-    # datdf = datdf[datmaskL | datmaskS | datmaskC | datmaskX]
     eventdf = eventdf[eventmask]
 
     return eventdf
@@ -238,10 +231,9 @@ def grid_rank(df, band, outdir="./"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="calculates the weight of interest in a candidate signal that was detected by turboSETI's find event pipeline, note that the present form of the program should be run on a single band's data at a time")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
-    parser.add_argument("-folder", "-f", help="directory .dat files are held in")
+    parser.add_argument("-folder", "-f", help="directory .csv files are held in")
     parser.add_argument("-text", "-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-outdir", '-o', help="directory to save results output results to", default=os.getcwd())
-    # parser.add_argument("-dat", "-d", help="flag to tell program to use .dat files in folder", action="store_true")
     parser.add_argument("-grid_ranking", "-g", help="rank candidates based on the region of sky they come from. groups candidates together with other hits from same patch of sky", default=False, action="store_true")
     args = parser.parse_args()
 

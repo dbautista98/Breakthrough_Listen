@@ -232,8 +232,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="calculates the weight of interest in a candidate signal that was detected by turboSETI's find event pipeline, note that the present form of the program should be run on a single band's data at a time")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("-folder", "-f", help="directory .csv files are held in")
-    parser.add_argument("-text", "-t", help="a .txt file to read the filepaths of the .dat files", action=None)
-    parser.add_argument("-outdir", '-o', help="directory to save results output results to", default=os.getcwd())
+    parser.add_argument("-text", "-t", help="a .txt file to read the filepaths of the .csv files", action=None)
+    parser.add_argument("-outdir", '-o', help="directory to output results to", default=os.getcwd())
     parser.add_argument("-grid_ranking", "-g", help="rank candidates based on the region of sky they come from. groups candidates together with other hits from same patch of sky", default=False, action="store_true")
     args = parser.parse_args()
 

@@ -28,7 +28,7 @@ Note: if you want to name this conda environment something other than `turboSETI
 
 ## `spectral_occupacy.py` Usage
 
-`spectral_occupancy` is a program to visualize how often `turboSETI` detects narroband signals in a given frequency bin. Spectral Occupancy is defined as the fraction of observations in which at least `turboSETI` detects *at least* one narrowband signal. To calculate this, a large number of `.dat` files are needed. 
+`spectral_occupancy` is a program to visualize how often `turboSETI` detects narrowband signals in a given frequency bin. Spectral Occupancy is defined as the fraction of observations in which at least `turboSETI` detects *at least* one narrowband signal in a given frequency bin. To calculate this, a large number of `.dat` files are needed. 
 
 With large datasets, it can be helpful to group the data with similar parameters, so this program has options to split observations based on the time of day the data was collected, the altitude the telescope was angled, and the azimuth it was angled. It also has the option to split the data up into smaller patches of the sky based on the altitude and azimuth.
 
@@ -56,7 +56,7 @@ Optional arguments:
 * `-upper_az` or `-uz` - sets the upper azimuth boundary for splitting the data. To be used in combination with `-lower_az`
 * `-N_altitude_bins` or `-na` - number of bins to split the altitude range of [0,90] into.
 * `-N_azimuth_bins` or `-nz` - number of bins to split the azimuth range [0,360) into. To be used with `-N_altitude_bins`
-* `-no_default` or `-no` - flag to tell the program $not$ to plot the default spectral occupancy with zero grouping of the data. This is best used with splitting the data, if you have already plotted the regular spectral occupancy.
+* `-no_default` or `-no` - flag to tell the program *not* to plot the default spectral occupancy with zero grouping of the data. This is best used with splitting the data, if you have already plotted the regular spectral occupancy.
 * `-exclude_zero_drift` or `-exclude` - flag to tell the program to exclude the hits with a drift rate of zero. This is best used if you have a mix of old and new `turboSETI` outputs, as older versions did not automatically discard zero drift hits. Recommend to use this option if you are unsure. 
 
 Below is an example of calling this program on a directory of L band`.dat` files. This inlcudes the optional parameters telling the program to exclude the data from the notch filter region and split the files up into north and south halves of the sky, then save the figures in another directory:
@@ -67,7 +67,7 @@ python3 spectral_occupancy.py L /home/path/to/dats/ -o /home/output/path/here/ -
 
 ## `remove_DC_spike.py` Usage
 
-`remove_DC_spike` is a program that goes through a `.dat` file an removes the coarse channel center frequencies. These are problematic because they are not physically meaningful and show up in spectral occupancy plots as a bin with 100% occupancy that repeats every ~3MHz from the starting frequency. They arise as a result of the zero frequency power during a fourier transform. 
+`remove_DC_spike` is a program that goes through a `.dat` file an removes the coarse channel center frequencies. These are problematic because they appear as a large spike (very high SNR) in the middle of the bandpass are not physically meaningful. As a result, they show up in spectral occupancy plots as a bin with 100% occupancy that repeats every ~3MHz from the starting frequency. They arise as a result of the zero frequency power during a fourier transform. 
 
 This program was initially written to be called prior to running `spectral_occupancy.py`, but is now called as `spectral_occupancy` runs. It isn't necessary to call this as a stand alone program anymore, but if you want, the steps are below:
 

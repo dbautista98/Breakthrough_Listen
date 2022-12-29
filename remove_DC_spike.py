@@ -227,7 +227,7 @@ def get_AltAz(RA, DEC, MJD):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Takes a set of .dat files and produces a new set of .dat files that have the DC spike removed. The files will be saved to a new directory that is created in the same directory as the .dat files, called <band>_band_no_DC_spike")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
-    parser.add_argument("-folder", "-f", help="directory .dat files are held in")
+    parser.add_argument("folder", help="directory .dat files are held in")
     parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
     parser.add_argument("-outdir", "-o", help="directory where the results are saved", default=os.getcwd())
     args = parser.parse_args()

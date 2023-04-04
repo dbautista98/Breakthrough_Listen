@@ -12,7 +12,7 @@ def reduce_frames(csv_list):
     df = pd.DataFrame()
     for i in trange(len(csv_list)):
         temp = pd.read_csv(csv_list[i])
-        temp = temp[temp["status"] == "on_table_1"] # reduce hits to only the first target hits
+        temp = temp[temp["status"] == "on_table_1"]
         df = df.append(temp, ignore_index=True)
     return df
 
@@ -43,12 +43,12 @@ if __name__ == "__main__":
     parser.add_argument("-parallel", "-p", help="number of processes to accelerate with", default=1)
     args = parser.parse_args()
 
-    csv_paths = glob.glob(args.csv_dir + "/*/*.csv")
+    csv_paths = glob.glob(args.csv_dir + "/*/events.csv")
     total_observations = glob.glob(args.csv_dir + "*")
 
     # make the histogram plots
     if not args.waterfall:
-        print("making histogram plots at", (args.outdir + "%s_band_random_chance_candidates.pdf"%args.band))
+        print("making histogram plots at", (args.outdir + "%s_band_bootstrap_events.pdf"%args.band))
         try:
             import spectral_occupancy as so
         except:
@@ -56,19 +56,18 @@ if __name__ == "__main__":
 
         df = reduce_frames(csv_paths)
 
-        hist, bin_edges = so.calculate_hist(df, args.band)
-        data_dict = {"frequency":bin_edges[:-1], "counts":hist}
-        data_df = pd.DataFrame(data_dict)
-        data_df.to_csv(args.outdir + "%s_band_random_chance_candidates.csv"%args.band)
+        hist, bin_edges, mjd = so.calculate_hist(df, args.band)
 
+        # account for triple counting hits due to version of turboSETI used
+        # hist = hist/3
 
         plt.figure(figsize=(10,5))
         plt.bar(bin_edges[:-1], hist, width=1)
         plt.xlabel("Frequency [Mhz]")
-        plt.ylabel('Number of Candidate "Signals"')
-        plt.title("Histogram of Chance Candidates\nN = %s observations and n = %s with candidates"%(len(total_observations), len(csv_paths)))
-        plt.savefig(args.outdir + "%s_band_random_chance_candidates.pdf"%args.band, bbox_inches="tight", transparent=False)
-        plt.savefig(args.outdir + "%s_band_random_chance_candidates.png"%args.band, bbox_inches="tight", transparent=False)
+        plt.ylabel('Number of "Events"')
+        plt.title("%s Band Histogram of Bootstrapped Events\nN = %s observations, n = %s with events and %s unique events"%(args.band, len(total_observations), len(csv_paths), len(df)))
+        plt.savefig(args.outdir + "%s_band_bootstrap_events.pdf"%args.band, bbox_inches="tight", transparent=False)
+        plt.savefig(args.outdir + "%s_band_bootstrap_events.png"%args.band, bbox_inches="tight", transparent=False)
 
     else:
         print("making waterfall plots of events")

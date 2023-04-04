@@ -74,18 +74,12 @@ def random_cadence_search_parallel(data_input):
 
 if __name__ == "__main__":
     import time
-    parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
-    # parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
+    parser = argparse.ArgumentParser(description="randomly selects and runs turboSETI's event search on a set of .dat files. This is done to estimate the chances of geting a technosignature event from random RFI")
     parser.add_argument("dat_dir", help="directory .dat files are held in")
     parser.add_argument("h5_dir", help="directory .h5 files are held in")
     parser.add_argument("outdir", help="directory where the output cadences searches will be saved")
     parser.add_argument("-n_iterations", "-n", help="number of random cadences to generate and search, default is 1 random shuffle", default=1)
     parser.add_argument("-parallel", "-p", help="number of parallel processes to accelerate with", default=1)
-    # parser.add_argument("-t", help="a .txt file to read the filepaths of the .dat files", action=None)
-    # parser.add_argument("-width", "-w", help="width of bin in Mhz", type=float, default=1)
-    # parser.add_argument("-notch_filter", "-nf", help="exclude data that was collected within GBT's notch filter when generating the plot", action="store_true")
-    # parser.add_argument("-DC", "-d", help="files contain DC spikes that need to be removed", action="store_true")
-    # parser.add_argument("-save", "-s", help="save the histogram bin edges and heights", action="store_true")
     args = parser.parse_args()
 
     # random_cadence_search(args.dat_dir, args.h5_dir, args.outdir, int(args.n_iterations))

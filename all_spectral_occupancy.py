@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import glob
 import numpy as np
 
-outdir = "/home/danielb/GBT_statistics/spectral_occupancy_plots/"#"/datax/scratch/danielb/GBT_statistics/all_bldw/spectral_occupancy/"
+outdir = "/datax/scratch/danielb/GBT_statistics/all_bldw/spectral_occupancy/"# "/home/danielb/GBT_statistics/spectral_occupancy_plots/"#
 
 bands = ["L", "S", "C", "X"]
 
@@ -15,11 +15,9 @@ opacity = 0.25
 for i in range(len(bands)):
     band_paths = glob.glob("/datax/scratch/danielb/GBT_statistics/all_bldw/%s_band_no_DC_spike/*_*dat"%bands[i])
     # bl tess targets
-    band_paths = glob.glob("/home/danielb/gbt_dats/traas_dats/%s_band_no_DC_spike/*_*dat"%bands[i])
+    # band_paths = glob.glob("/home/danielb/gbt_dats/traas_dats/%s_band_no_DC_spike/*_*dat"%bands[i])
 
     bin_edges, prob_hist, n_observations, ax = so.calculate_proportion(band_paths, bin_width=1, GBT_band=bands[i], notch_filter=True, outdir=outdir, exclude_zero_drift=True)
-    # noise = np.random.random(1000)
-    # n_observations = 0
     axs[i].bar(bin_edges[:-1], prob_hist, width=1)
     if bands[i] == "L":
         axs[i].axvspan(1200, 1341, alpha=opacity, color='red', label="notch filter region")
@@ -27,7 +25,7 @@ for i in range(len(bands)):
         axs[i].axvspan(1350, 1390, alpha=opacity, color="tab:green", label="ATC")
         axs[i].axvspan(1525, 1535, alpha=opacity, color="tab:purple", label="MSS")
         axs[i].axvspan(1535, 1559, alpha=opacity, color="tab:brown", label="MSS")
-        axs[i].axvspan(1559, 1610, alpha=opacity, color="tab:pink", label="GNSS")
+        axs[i].axvspan(1559, 1626.5, alpha=opacity, color="tab:pink", label="GNSS")
         axs[i].axvspan(1675, 1695, alpha=opacity, color="tab:gray", label="GOES")
         axs[i].axvspan(1850, 1900, alpha=opacity, color="tab:olive", label="PCS")
         axs[i].legend(fontsize=fontsize, ncol=3)
@@ -53,4 +51,4 @@ for i in range(len(bands)):
     axs[i].set_ylim(0,1.05)
 # fig.savefig("test.pdf", bbox_inches="tight", transparent=False)
 fig.savefig(outdir + "all_bands_spectral_occupancy.pdf", bbox_inches="tight", transparent=False)
-fig.savefig("/home/danielb/writeup_plots/BL_TESS_all_bands_spectral_occupancy.pdf", bbox_inches="tight", transparent=False)
+fig.savefig("/home/danielb/writeup_plots/all_bands_spectral_occupancy.pdf", bbox_inches="tight", transparent=False)

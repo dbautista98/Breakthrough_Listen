@@ -74,7 +74,7 @@ def random_cadence_search_parallel(data_input):
 
 if __name__ == "__main__":
     import time
-    parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
+    parser = argparse.ArgumentParser(description="randomly selects and runs turboSETI's event search on a set of .dat files. This is done to estimate the chances of geting a technosignature event from random RFI")
     # parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("dat_dir", help="directory .dat files are held in")
     parser.add_argument("h5_dir", help="directory .h5 files are held in")

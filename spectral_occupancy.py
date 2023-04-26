@@ -719,10 +719,13 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None,
         fig = plt.gcf()
 
     if exclude_zero_drift:
-            title_addition = title_addition + "no zero drift"
+            title_addition = title_addition + " no zero drift"
+
+    xx = 1.25
+    yy = 1.7
 
     if band == "L":
-        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        im = ax.imshow(hist, cmap="Greys", aspect="auto")
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel("log(hit count)")
 
@@ -733,15 +736,16 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None,
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
+        ax.set_ylabel("Observation")
         ax.set_title("L band hit counts %s"%title_addition)
-        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(xx, yy)
         if title_addition != "":
             plt.savefig(outdir + "/L_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
             plt.savefig(outdir + "/L_band_heatmap.pdf", bbox_inches=extent, transparent=False)
     
     if band ==  "S":
-        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        im = ax.imshow(hist, cmap="Greys", aspect="auto")
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel("log(hit count)")
 
@@ -751,15 +755,16 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None,
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
+        ax.set_ylabel("Observation")
         ax.set_title("S band hit counts %s"%title_addition)
-        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(xx, yy)
         if title_addition != "":
             plt.savefig(outdir + "/S_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
             plt.savefig(outdir + "/S_band_heatmap.pdf", bbox_inches=extent, transparent=False)
     
     if band == "C":
-        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        im = ax.imshow(hist, cmap="Greys", aspect="auto")
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel("log(hit count)")
 
@@ -769,15 +774,16 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None,
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
+        ax.set_ylabel("Observation")
         ax.set_title("C band hit counts %s"%title_addition)
-        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(xx, yy)
         if title_addition != "":
             plt.savefig(outdir + "/C_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
             plt.savefig(outdir + "/C_band_heatmap.pdf", bbox_inches=extent, transparent=False)
     
     if band == "X":
-        im = ax.imshow(hist, cmap="viridis_r", aspect="auto")
+        im = ax.imshow(hist, cmap="Greys", aspect="auto")
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel("log(hit count)")
 
@@ -787,8 +793,9 @@ def plot_heatmap(hist, band, outdir=".", times=None, title_addition="", ax=None,
         ax.set_xticks(ticks=indices)
         ax.set_xticklabels(freqs[indices].astype(int))
         ax.set_xlabel("Frequency [MHz]")
+        ax.set_ylabel("Observation")
         ax.set_title("X band hit counts %s"%title_addition)
-        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.3, 1.4)
+        extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(xx, yy)
         if title_addition != "":
             plt.savefig(outdir + "/X_band_heatmap%s.pdf"%("_"+title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
         else:
@@ -813,9 +820,15 @@ def plot_ratio(on_hist, off_hist, bin_edges, band, outdir=".", title_addition=""
         zero_drift_str = " no zero drift"
 
     ax.plot(bin_edges[:-1], ratio)
+    if band == "L":
+        ax.axvspan(1200, 1341, alpha=0.5, color='red', label="notch filter region")
+        ax.legend()
+    if band == "S":
+        ax.axvspan(2300, 2360, alpha=0.5, color='red', label="notch filter region")
+        ax.legend()
     ax.set_xlabel("Frequency [MHz]")
     ax.set_ylabel("ratio")
-    ax.set_title("%s Band spectral occupancy%s ratio of %s / remaining"%(zero_drift_str, band, title_addition))
+    ax.set_title("%s Band spectral occupancy ratio of %s / remaining"%(band, title_addition))
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).expanded(1.1, 1.2)
     plt.savefig(outdir + "/%s_band_ratio_%s.pdf"%(band, title_addition.replace(" ", "_")), bbox_inches=extent, transparent=False)
 
@@ -886,7 +899,7 @@ def split_data(band, df, on_mask, off_mask, outdir, width, notch_filter, save, l
 
     occupancy_ax.set_xlabel("Frequency [Mhz]")
     occupancy_ax.set_ylabel("Fraction with Hits")
-    occupancy_ax.set_title("%s Band Spectral Occupancy%s\nn=%s observations between %s\nn=%s observations between %s"%(zero_drift_str, band,n_observations_on, on_title_addition, n_observations_off, off_title_addition))
+    occupancy_ax.set_title("%s Band Spectral Occupancy%s\nn=%s observations between %s\nn=%s observations between %s"%(band, zero_drift_str, n_observations_on, on_title_addition, n_observations_off, off_title_addition))
     if band == "L":
         occupancy_ax.axvspan(1200, 1341, alpha=0.5, color='red', label="notch filter region")
     if band == "S":

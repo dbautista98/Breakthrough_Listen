@@ -35,7 +35,7 @@ def plot_pipeline(plot_directory):
                         plot_dir=plot_dir)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="generates a histogram of the spectral occupancy from a given set of .dat files")
+    parser = argparse.ArgumentParser(description="plots the distribution (and optionally the waterfall plot) of the candidate 'events' from the turboSETI bootstrap data")
     parser.add_argument("band", help="the GBT band that the data was collected from. Either L, S, C, or X")
     parser.add_argument("csv_dir", help="directory .csv files are held in")
     parser.add_argument("outdir", help="directory where the output cadences searches will be saved")
